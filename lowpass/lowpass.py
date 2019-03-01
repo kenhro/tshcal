@@ -4,8 +4,12 @@ import sys
 from sys import *
 import struct
 import os
-from MySQLdb import *
-from _mysql_exceptions import *
+
+# from MySQLdb import *  # TODO find all MySQL calls and put explicit (NOT STAR) imports here
+# from _mysql_exceptions import *
+import MySQLdb as sql
+import MySQLdb._exceptions as _mysql_exceptions
+
 import datetime
 from time import *
 from subprocess import *
@@ -16,7 +20,9 @@ import matplotlib.pyplot as plt
 from pylive import live_plotter_xy
 import warnings
 
-from secrets import SDB, SUSER, SPASSWD
+from tshcal.secrets import SDB, SUSER, SPASSWD
+
+raise SystemExit
 
 warnings.filterwarnings("ignore", ".*GUI is implemented")
 
