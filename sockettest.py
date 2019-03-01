@@ -1,5 +1,5 @@
 import socket
-from tshcal_config import TSHES13_IPADDR
+from secrets import TSHES13_IPADDR
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((TSHES13_IPADDR,9750))

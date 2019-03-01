@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from pylive import live_plotter_xy
 import warnings
 
-from lowpass_config import SDB, SUSER, SPASSWD
+from secrets import SDB, SUSER, SPASSWD
 
 warnings.filterwarnings("ignore", ".*GUI is implemented")
 
