@@ -4,11 +4,17 @@ import numpy as np
 # use ggplot style for better visuals
 plt.style.use('ggplot')
 
-def live_plotter(x_vec,y1_data,line1,identifier='',pause_sec=0.1):
-    if line1==[]:
+
+def handle_close(evt):
+    print('closed figure')
+
+
+def live_plot(x_vec, y1_data, line1, identifier='', pause_sec=0.1):
+    if line1 == []:
         # this is the call to matplotlib that allows dynamic plotting
         plt.ion()
         fig = plt.figure(figsize=(13,6))
+        fig.canvas.mpl_connect('close_event', handle_close)
         ax = fig.add_subplot(111)
         # create a variable for the line so we can later update it
         line1, = ax.plot(x_vec,y1_data,'-o',alpha=0.8)        
@@ -49,12 +55,13 @@ def get_special_median2(a, n=20):
     return np.median(a2)
 
 # the function below is for updating both x and y values (like for updating dates on the x-axis)
-def live_plotter_xy(x_vec, y1_data, line1, xlabel='xlabel', ylabel='ylabel', identifier='', pause_sec=0.1):
+def live_plot_xy(x_vec, y1_data, line1, xlabel='xlabel', ylabel='ylabel', identifier='', pause_sec=0.1):
     # this first part happens once at the very beginning
     if line1 == []:
         plt.ion()
         #fig = plt.figure(figsize=(13,6))
         fig = plt.figure(figsize=(15, 7))
+        fig.canvas.mpl_connect('close_event', handle_close)
         ax = fig.add_subplot(111)
         line1, = ax.plot(x_vec, y1_data, 'r', alpha=0.77)
         plt.xlabel(xlabel)
