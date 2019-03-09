@@ -1,30 +1,20 @@
 #!/usr/bin/env python
 
-"""This module utilizes argparse from the standard library to define what arguments are required and handles how to
-parse those from sys.argv.  The argparse module automatically generates help and usage messages and issues errors
-when users give the program invalid arguments."""
+"""This module utilizes argparse from the standard library to define what arguments are required and handles those with
+defaults and logic to help detect avoid invalid arguments."""
 
 
 import os
 import re
-import datetime
 import argparse
 
-
-# TODO consolidate defaults in a defaults module or directory
-_NOW = datetime.datetime.now()
-_DEFAULT_START = _NOW - datetime.timedelta(microseconds=_NOW.microsecond) - datetime.timedelta(minutes=5)
-_DEFAULT_OUTDIR = '/tmp'
-
-# TODO figure out if/what makes sense to have defaults or not
-_DEFAULT_SENSOR = 'es13'
-_DEFAULT_RATE = 100
+from inputs.defaults import DEFAULT_OUTDIR, DEFAULT_SENSOR, DEFAULT_RATE, DEFAULT_GAIN
 
 
 def folder_str(f):
     """return string provided only if this folder exists"""
     if not os.path.exists(f):
-        raise argparse.ArgumentTypeError('"%s" does not exist as a folder' % f)
+        raise argparse.ArgumentTypeError('"%s" does not exist, you must create this folder' % f)
     return f
 
 
@@ -36,9 +26,24 @@ def rate_str(r):
         raise argparse.ArgumentTypeError('%s' % e)
 
     # William replace next 2 lines so that we raise error for any input besides our specific TSH-ES sample rates
-    # William maybe use "not in" syntax
+    # William maybe use "not in" syntax for this
+    # William see SAMS-SPC-005 Rev A "SAMS Data & Command Format Definitions: Developers Edition"
     if value < 1 or value > 999:
         raise argparse.ArgumentTypeError('rate, r, in sa/sec must be such that 1 <= r <= 999')
+
+    return value
+
+
+def gain_str(g):
+    """return valid gain as float value converted from string, g"""
+    try:
+        value = float(g)
+    except Exception as e:
+        raise argparse.ArgumentTypeError('%s' % e)
+
+    # William replace next 2 lines so that we raise error for any input besides our specific TSH-ES gains
+    if value < 1 or value > 999:
+        raise argparse.ArgumentTypeError('gain, g, must be such that 1 <= r <= 999')
 
     return value
 
@@ -64,16 +69,20 @@ def parse_inputs():
     group.add_argument('-q', '--quiet', action='store_true')
 
     # sample rate
-    help_rate = "sample rate (sa/sec); default = %s" % str(_DEFAULT_RATE)
-    parser.add_argument('-r', '--rate', default=_DEFAULT_RATE, type=rate_str, help=help_rate)
+    help_rate = "sample rate (sa/sec); default = %s" % str(DEFAULT_RATE)
+    parser.add_argument('-r', '--rate', default=DEFAULT_RATE, type=rate_str, help=help_rate)
+
+    # gain
+    help_gain = "gain; default = %s" % str(DEFAULT_GAIN)
+    parser.add_argument('-g', '--gain', default=DEFAULT_GAIN, type=gain_str, help=help_gain)
 
     # sensor
-    help_sensor = "sensor; default is %s" % _DEFAULT_SENSOR
-    parser.add_argument('-s', '--sensor', default=_DEFAULT_SENSOR, type=sensor_str, help=help_sensor)
+    help_sensor = "sensor; default is %s" % DEFAULT_SENSOR
+    parser.add_argument('-s', '--sensor', default=DEFAULT_SENSOR, type=sensor_str, help=help_sensor)
 
     # output directory
-    help_outdir = 'output dir; default is %s' % _DEFAULT_OUTDIR
-    parser.add_argument('-o', '--outdir', default=_DEFAULT_OUTDIR, type=folder_str, help=help_outdir)
+    help_outdir = 'output dir; default is %s' % DEFAULT_OUTDIR
+    parser.add_argument('-o', '--outdir', default=DEFAULT_OUTDIR, type=folder_str, help=help_outdir)
 
     # parse
     args = parser.parse_args()
@@ -82,10 +91,10 @@ def parse_inputs():
     if args.quiet:
         pass
     elif args.verbose:
-        print("sensor {} at sample rate of {} sa/sec".format(args.sensor, args.rate))
-        print("output directory is {}".format(args.outdir))
+        print("sensor = {}, rate = {} sa/sec, gain = {}".format(args.sensor, args.rate, args.gain))
+        print("output directory = {}".format(args.outdir))
     else:
-        print("{} at {} sa/sec in {}".format(args.sensor, args.rate, args.outdir))
+        print("{}, {} sa/sec, g={} in {}".format(args.sensor, args.rate, args.gain, args.outdir))
 
     return args
 
