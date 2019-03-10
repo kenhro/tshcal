@@ -7,8 +7,9 @@ defaults and logic to help detect avoid invalid arguments."""
 import os
 import re
 import argparse
+import logging.config
 
-from inputs.defaults import DEFAULT_OUTDIR, DEFAULT_SENSOR, DEFAULT_RATE, DEFAULT_GAIN
+from defaults import DEFAULT_OUTDIR, DEFAULT_SENSOR, DEFAULT_RATE, DEFAULT_GAIN, ROOT_DIR
 
 
 def folder_str(f):
@@ -84,17 +85,30 @@ def parse_inputs():
     help_outdir = 'output dir; default is %s' % DEFAULT_OUTDIR
     parser.add_argument('-o', '--outdir', default=DEFAULT_OUTDIR, type=folder_str, help=help_outdir)
 
+    # start logging
+    logging.config.fileConfig(os.path.join(ROOT_DIR, 'logging/log.conf'))  # get logging config info from file
+    logger = logging.getLogger('root')
+    logger.info('-' * 55)
+    logger.info('parsing input arguments')
+
     # parse
     args = parser.parse_args()
 
     # show args
+    logger.info(str(args).replace('Namespace', 'inputs:'))
+
+    # adjust log level based on verbosity input args
     if args.quiet:
-        pass
+        logger.warning('switching to quiet (WARNING level) logging')
+        level = logging.WARNING
     elif args.verbose:
-        print("sensor = {}, rate = {} sa/sec, gain = {}".format(args.sensor, args.rate, args.gain))
-        print("output directory = {}".format(args.outdir))
+        level = logging.DEBUG
     else:
-        print("{}, {} sa/sec, g={} in {}".format(args.sensor, args.rate, args.gain, args.outdir))
+        level = logging.INFO
+
+    logger.setLevel(level)
+    for handler in logger.handlers:
+        handler.setLevel(level)
 
     return args
 

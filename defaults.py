@@ -10,6 +10,11 @@ DEFAULT_GAIN = 1
 
 # output directory
 if os.name == 'nt':
+    # windows
     DEFAULT_OUTDIR = 'c:/temp'
 else:
+    # linux
     DEFAULT_OUTDIR = '/tmp'
+
+# project root directory
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
