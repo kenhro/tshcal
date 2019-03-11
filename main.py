@@ -2,6 +2,7 @@
 
 import sys
 from inputs.argparser import parse_inputs
+from commanding.tsh_commands import set_tsh
 
 
 def main():
@@ -9,7 +10,8 @@ def main():
     # get input arguments
     args = parse_inputs()
 
-    print(args)
+    # set tsh parameters via commanding
+    set_tsh(args)
 
     return 0  # return zero for success
 

@@ -19,6 +19,18 @@ def folder_str(f):
     return f
 
 
+def outdir_str(d):
+    """return string provided only if this folder exists and we can create logs subdir in it"""
+    f = folder_str(d)
+    logs_dir = os.path.join(f, 'logs')
+    try:
+        if not os.path.exists(logs_dir):
+            os.makedirs(logs_dir)
+    except OSError:
+        raise argparse.ArgumentTypeError('could not create "%s" directory' % logs_dir)
+    return f
+
+
 def rate_str(r):
     """return valid sample rate (sa/sec) as int value converted from string, r"""
     try:
@@ -26,9 +38,9 @@ def rate_str(r):
     except Exception as e:
         raise argparse.ArgumentTypeError('%s' % e)
 
-    # William replace next 2 lines so that we raise error for any input besides our specific TSH-ES sample rates
-    # William maybe use "not in" syntax for this
-    # William see SAMS-SPC-005 Rev A "SAMS Data & Command Format Definitions: Developers Edition"
+    # TODO replace next 2 lines so that we raise error for any input besides our specific TSH-ES sample rates
+    # TODO maybe use "not in" syntax for this
+    # TODO see SAMS-SPC-005 Rev A "SAMS Data & Command Format Definitions: Developers Edition"
     if value < 1 or value > 999:
         raise argparse.ArgumentTypeError('rate, r, in sa/sec must be such that 1 <= r <= 999')
 
@@ -42,7 +54,7 @@ def gain_str(g):
     except Exception as e:
         raise argparse.ArgumentTypeError('%s' % e)
 
-    # William replace next 2 lines so that we raise error for any input besides our specific TSH-ES gains
+    # TODO replace next 2 lines so that we raise error for any input besides our specific TSH-ES gains
     if value < 1 or value > 999:
         raise argparse.ArgumentTypeError('gain, g, must be such that 1 <= r <= 999')
 
@@ -83,10 +95,13 @@ def parse_inputs():
 
     # output directory
     help_outdir = 'output dir; default is %s' % DEFAULT_OUTDIR
-    parser.add_argument('-o', '--outdir', default=DEFAULT_OUTDIR, type=folder_str, help=help_outdir)
+    parser.add_argument('-o', '--outdir', default=DEFAULT_OUTDIR, type=outdir_str, help=help_outdir)
+
+    # FIXME we do not check that log directory spec in log_conf_file matches relative to outdir, assumed this above
 
     # start logging
-    logging.config.fileConfig(os.path.join(ROOT_DIR, 'logging/log.conf'))  # get logging config info from file
+    log_conf_file = os.path.join(ROOT_DIR, 'logging', 'log.conf')
+    logging.config.fileConfig(log_conf_file)  # get log config from a file
     logger = logging.getLogger('root')
     logger.info('-' * 55)
     logger.info('parsing input arguments')
