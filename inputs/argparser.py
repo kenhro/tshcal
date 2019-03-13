@@ -114,7 +114,7 @@ def parse_inputs():
 
     # adjust log level based on verbosity input args
     if args.quiet:
-        logger.warning('switching to quiet (WARNING level) logging')
+        logger.warning('switching to quiet for logging (WARNING level)')
         level = logging.WARNING
     elif args.verbose:
         level = logging.DEBUG
