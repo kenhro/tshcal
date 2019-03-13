@@ -105,7 +105,6 @@ venv.bak/
 
 # sams stuff
 secrets.py
+secret.py
 tshcal_config.py
 lowpass/lowpass_config.py
-
-
