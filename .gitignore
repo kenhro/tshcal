@@ -107,5 +107,4 @@ venv.bak/
 secrets.py
 tshcal_config.py
 lowpass/lowpass_config.py
-
-
+secret.py
