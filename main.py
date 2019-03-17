@@ -10,8 +10,8 @@ def main():
     # get input arguments
     args = parse_inputs()
 
-    # set tsh parameters via commanding
-    set_tsh(args)
+    # use commanding interface to set tsh parameters
+    cmd_out = set_tsh(args)
 
     return 0  # return zero for success
 

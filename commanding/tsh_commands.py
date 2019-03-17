@@ -6,4 +6,4 @@ def set_tsh(a):
 
     # start logging
     logger = logging.getLogger('root')
-    logger.info('setting tsh configuration via commanding')
+    logger.info('use commanding interface to configure tsh')

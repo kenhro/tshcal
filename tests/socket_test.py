@@ -7,7 +7,7 @@ import datetime
 from secret import TSHES13_IPADDR, PIHOLE_IPADDR
 
 
-def eric_example(ip_addr, port):
+def eric_example(ip_addr, port=9750):
     """establish socket connection to tsh on data port (9750) as proof of concept by Eric Kelly"""
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -67,7 +67,17 @@ def main():
     arr2 = ([0.1, 0.2, 0.3, 0.4, 0.5], [1.1, 2.2, 3.3, 4.4, 5.5])
     val3 = 'green_eggs'
     d4 = datetime.datetime.now()  # JSON cannot serialize datetime...so need default=str keyword arg
-    json_dumps_data = json.dumps({'a': arr1, 'b': arr2, 'c': val3, 'd': d4}, default=str)
+    d = dict()
+    d['a'] = arr1
+    d['b'] = arr2
+    d['c'] = val3
+    d['d'] = d4
+    d['e'] = 5
+    d['f'] = 6
+    d['g'] = 7
+    d['h'] = 8
+    d['i'] = 9
+    json_dumps_data = json.dumps(d, default=str)
 
     print('Sending %d bytes' % sys.getsizeof(json_dumps_data))
 

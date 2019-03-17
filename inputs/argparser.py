@@ -7,9 +7,12 @@ defaults and logic to help detect avoid invalid arguments."""
 import os
 import re
 import argparse
+from dateutil import parser as dparser
 import logging.config
 
-from defaults import DEFAULT_OUTDIR, DEFAULT_SENSOR, DEFAULT_RATE, DEFAULT_GAIN, ROOT_DIR
+from defaults import DEFAULT_OUTDIR, ROOT_DIR
+from defaults import DEFAULT_SENSOR, DEFAULT_RATE, DEFAULT_GAIN
+from defaults import DEFAULT_START
 
 
 def folder_str(f):
@@ -71,6 +74,20 @@ def sensor_str(s):
         raise argparse.ArgumentError('"%s" does not appear to be a valid string for a TSH (e.g. es09)')
 
 
+def start_str(t):
+    """ return string provided only if it is a valid time at least 5 minutes from now
+
+    :param t: string for time to start
+    :return: string for time to start
+    """
+    try:
+        outstr = dparser.parse(t)
+    except:
+        self.user_screwups += 1
+        raise
+    return outstr
+
+
 def parse_inputs():
     """parse input arguments using argparse from standard library"""
 
@@ -96,6 +113,10 @@ def parse_inputs():
     # output directory
     help_outdir = 'output dir; default is %s' % DEFAULT_OUTDIR
     parser.add_argument('-o', '--outdir', default=DEFAULT_OUTDIR, type=outdir_str, help=help_outdir)
+
+    # start time
+    help_start = 'start time; default is %s' % DEFAULT_START
+    parser.add_argument('-t', '--start', default=DEFAULT_START, type=start_str, help=help_start)
 
     # FIXME we do not check that log directory spec in log_conf_file matches relative to outdir, assumed this above
 
