@@ -17,10 +17,10 @@ from syslog import *
 import numpy as np
 import scipy.signal
 import matplotlib.pyplot as plt
-from pylive import live_plotter_xy
+from pylive import live_plot_xy
 import warnings
 
-from tshcal.secrets import SDB, SUSER, SPASSWD
+from tshcal.secret import SDB, SUSER, SPASSWD
 
 raise SystemExit
 
