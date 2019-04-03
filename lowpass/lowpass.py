@@ -22,8 +22,6 @@ import warnings
 
 from tshcal.secret import SDB, SUSER, SPASSWD
 
-raise SystemExit
-
 warnings.filterwarnings("ignore", ".*GUI is implemented")
 
 # input parameters
@@ -110,8 +108,10 @@ def UnixToHumanTime(utime, altFormat = 0):
     cmd = 'date -u -d "1970-01-01 %d sec" +"%%Y %%m %%d %%H %%M %%S"' % int(utime)
     try:
         result = getoutput(cmd)
-        s = split(result)
-        s[5] = atoi(s[5]) + fraction
+        # s = split(result)
+        s = result.split()
+        # s[5] = atoi(s[5]) + fraction
+        s[5] = int(s[5]) + fraction
     except ValueError as err:
         t = 'date conversion error\ndate command was: %sdate command returned: %s' % (cmd, result)
         printLog(t)
@@ -166,10 +166,11 @@ def sqlConnect(command, shost='localhost', suser=SUSER, spasswd=SPASSWD, sdb=SDB
     repeat = 1
     while repeat:
         try:
-            con = Connection(host=shost, user=suser, passwd=spasswd, db=sdb)
+            con = sql.Connection(host=shost, user=suser, passwd=spasswd, db=sdb)
             cursor = con.cursor()
             cursor.execute(command)
             results = cursor.fetchall()
+            # print(results)
             repeat = 0
             cursor.close()
             con.close()
@@ -186,7 +187,7 @@ def sqlConnect(command, shost='localhost', suser=SUSER, spasswd=SPASSWD, sdb=SDB
 
 def guessPacket(packet, showWarnings=0):
     """try to create a packet of the appropriate type"""
-    subtypes = [sams2Packet,samsTshEs, hirap, oss, oare, besttmf, finaltmf, finalbias, radgse, samsff, artificial]
+    subtypes = [samsTshEs, sams2Packet, hirap, oss, oare, besttmf, finaltmf, finalbias, radgse, samsff, artificial]
     for i in subtypes:
         try:
             p = i(packet, showWarnings=0)
@@ -834,8 +835,10 @@ class artificial(accelPacket):
         if 32 > len(self.p): # minimum length 
             self._artificial_ = 0
             return self._artificial_
-        byte0 = struct.unpack('c', self.p[0])[0]
-        byte1 = struct.unpack('c', self.p[1])[0]
+        # byte0 = struct.unpack('c', self.p[0])[0]
+        # byte1 = struct.unpack('c', self.p[1])[0]
+        byte0 = struct.unpack('c', bytes([self.p[0]]))[0]
+        byte1 = struct.unpack('c', bytes([self.p[1]]))[0]
         if not (byte0 == chr(0xfa) and byte1 == chr(0xce)):
             self._artificial_ = 0
             return self._artificial_
@@ -1421,8 +1424,10 @@ class sams2Packet(accelPacket):
                     t = t + ' packet too short (%s) to be a sams-ii acceleration packet' % len(self.p)
                     printLog(t)
                 return self._sams2_
-            byte0 = struct.unpack('c', self.p[0])[0]
-            byte1 = struct.unpack('c', self.p[1])[0]
+            # byte0 = struct.unpack('c', self.p[0])[0]
+            # byte1 = struct.unpack('c', self.p[1])[0]
+            byte0 = struct.unpack('c', bytes([self.p[0]]))[0]
+            byte1 = struct.unpack('c', bytes([self.p[1]]))[0]
             if not (byte0 == chr(0xda) and byte1 == chr(0xbe)):
                 self._sams2_ = 0
                 if self._showWarnings_:
@@ -1763,19 +1768,24 @@ class samsTshEs(accelPacket):
                     t = t + ' packet too short (%s) to be a samsTshEs acceleration packet' % len(self.p)
                     printLog(t)
                 return self._samsTshEs_
-            byte0 = struct.unpack('c', self.p[0])[0]
-            byte1 = struct.unpack('c', self.p[1])[0]
-            if not (byte0 == chr(0xac) and byte1 == chr(0xd3)):
+            # byte0 = struct.unpack('c', self.p[0])[0]
+            # byte1 = struct.unpack('c', self.p[1])[0]
+            byte0 = struct.unpack('c', bytes([self.p[0]]))[0]
+            byte1 = struct.unpack('c', bytes([self.p[1]]))[0]
+            # if not (byte0 == chr(0xac) and byte1 == chr(0xd3)):
+            if not (byte0 == bytes([0xac]) and byte1 == bytes([0xd3])):
                 self._samsTshEs_ = 0
                 if self._showWarnings_:
                     t = 'SAMS TSH-ES packet warning\n' + self.hexDump() + UnixToHumanTime(time(), 1) + '\n'  
                     t = t + ' packet cannot be samsTshEs accel because it does not start with 0xacd3'
                     printLog(t)
                 return self._samsTshEs_
-            byte2 = struct.unpack('c', self.p[40])[0]
-            byte3 = struct.unpack('c', self.p[41])[0]
+            # byte2 = struct.unpack('c', self.p[40])[0]
+            # byte3 = struct.unpack('c', self.p[41])[0]
+            byte2 = struct.unpack('c', bytes([self.p[40]]))[0]
+            byte3 = struct.unpack('c', bytes([self.p[41]]))[0]
             selector = ord(byte2)*256+ord(byte3)
-            accelpacket = (selector == 170) or (selector == 171) # || (selector == 177)
+            accelpacket = (selector == 170) or (selector == 171)  # || (selector == 177)
             if not accelpacket:
                 self._samsTshEs_ = 0
                 if self._showWarnings_:
@@ -1823,9 +1833,10 @@ class samsTshEs(accelPacket):
     def Id(self): 
         if not self._Id_:
             self._Id_ = self.p[44:60]
-            self._Id_ = replace(self._Id_ , chr(0), '') # delete nulls
-            self._Id_ = join(split(self._Id_, '-'), '') # delete dashes
-            self._Id_ = self._Id_[-4:]                  # keep last 4 characters only, i.e., "es13"
+            # self._Id_ = replace(self._Id_ , chr(0), '')  # delete nulls
+            # self._Id_ = join(split(self._Id_, '-'), '')  # delete dashes
+            self._Id_ = self._Id_.replace(b'-', b'').replace(b'\0', b'')  # delete dashes and nulls
+            self._Id_ = self._Id_[-4:]                   # keep last 4 characters only, i.e., "es13"
         return self._Id_
         
     def status(self): # packet status
@@ -2244,7 +2255,7 @@ def run(table, fs, fc, ax, num_pkts, xlabel, ylabel, pause_sec):
         
         # call live plotter    
         ident = UnixToHumanTime(start_time) + '   [ now: %s ]' % datetime.datetime.now()
-        line1 = live_plotter_xy(t, y, line1, xlabel=xlabel, ylabel=ylabel, identifier=ident, pause_sec=pause_sec)    
+        line1 = live_plot_xy(t, y, line1, xlabel=xlabel, ylabel=ylabel, identifier=ident, pause_sec=pause_sec)
 
 
 def parameters_ok():
@@ -2337,7 +2348,7 @@ def main(argv):
                 # call main routine to do endless loop live LPF plotting
                 run(table, fs, fc, ax, num_pkts, xlabel, ylabel, pause_sec)
                 
-            return 0 # zero for unix success
+            return 0  # zero is return code of success for unix
         
     print_usage()  
 
@@ -2345,3 +2356,4 @@ def main(argv):
 if __name__ == '__main__':
     """run main with cmd line args and return exit code"""
     sys.exit(main(sys.argv))
+
