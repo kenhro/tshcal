@@ -34,6 +34,7 @@ def live_plot(x_vec, y1_data, line1, identifier='', pause_sec=0.1):
     # return line so we can update it again in the next iteration
     return line1
 
+
 # FIXME we can probably figure out a better way to reckon limits?
 def get_lims(y):
     """get decent plot limits (not optimal though)"""
@@ -42,17 +43,20 @@ def get_lims(y):
     bot, top = m - 4 * s, m + 4 * s
     return bot, top, m, s
 
+
 def get_special_median(a, n=20):
     """split array into n pieces and return special median value after ignoring the end pieces"""
     # this allows for edge effects (initially was mean, which makes sense, but median not so much)
     a2 = np.concatenate(np.array_split(a, n)[-6:-4])
     return np.median(a2)
 
+
 def get_special_median2(a, n=20):
     """split array into n pieces and return special median value after ignoring the end pieces"""
     # this allows for edge effects (initially was mean, which makes sense, but median not so much)
     a2 = np.concatenate(np.array_split(a, n)[3:-3])
     return np.median(a2)
+
 
 # the function below is for updating both x and y values (like for updating dates on the x-axis)
 def live_plot_xy(x_vec, y1_data, line1, xlabel='xlabel', ylabel='ylabel', identifier='', pause_sec=0.1):
@@ -80,8 +84,8 @@ def live_plot_xy(x_vec, y1_data, line1, xlabel='xlabel', ylabel='ylabel', identi
     title_str2 = 'pedian = %d g  ' % mm2 + 'Start Time: {}'.format(identifier)
     title_str = '\n'.join([title_str1, title_str2])
     plt.title(title_str)
-    line1.set_data(x_vec,y1_data)
-    plt.xlim(np.min(x_vec),np.max(x_vec))
+    line1.set_data(x_vec, y1_data)
+    plt.xlim(np.min(x_vec), np.max(x_vec))
     
     #if np.min(y1_data)<=line1.axes.get_ylim()[0] or np.max(y1_data)>=line1.axes.get_ylim()[1]:
     #    plt.ylim([np.min(y1_data)-np.std(y1_data),np.max(y1_data)+np.std(y1_data)])
