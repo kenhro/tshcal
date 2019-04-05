@@ -1,3 +1,4 @@
+import struct
 import socket
 
 class TshesParamsPacket(object):
@@ -34,3 +35,72 @@ class TshesParamsPacket(object):
         the host byte order is the same as network byte order, this is a no-op; otherwise, it performs a 4-byte swap
         operation.  Only do this for the integer attribute, val."""
         self.val = socket.htonl(self.val)
+
+
+class TshesMessage(object):
+    """A class to handle tshes message [packets?]."""
+
+    def __init__(self, p):
+        self.p = p
+
+    def __str__(self):
+
+        # for idx, b in enumerate(self.p):
+        #     # print('{:<8}{:<#8x}{}'.format(idx, b, self.p[i:i+1]))
+        #     print('{:<8}{:<#8x}'.format(idx, b))
+
+        # two sync bytes
+        byte0 = struct.unpack('c', bytes([self.p[0]]))[0]
+        byte1 = struct.unpack('c', bytes([self.p[1]]))[0]
+        if not (byte0 == bytes([0xac]) and byte1 == bytes([0xd3])):
+            raise ValueError('bad sync bytes for TshesMessage')
+
+        # msg_size is total number of bytes in message (includes sync bytes and msg_size)
+        byte2 = struct.unpack('c', bytes([self.p[2]]))[0]
+        byte3 = struct.unpack('c', bytes([self.p[3]]))[0]
+        msg_size = ord(byte2) * 256 + ord(byte3)
+
+        # sequence number
+        byte4 = struct.unpack('c', bytes([self.p[4]]))[0]
+        byte5 = struct.unpack('c', bytes([self.p[5]]))[0]
+        seq_num = ord(byte4) * 256 + ord(byte5)
+
+        # check sum
+        byte6 = struct.unpack('c', bytes([self.p[6]]))[0]
+        byte7 = struct.unpack('c', bytes([self.p[7]]))[0]
+        chk_sum = ord(byte6) * 256 + ord(byte7)
+
+        # source identifier
+        src = self.p[8:24]
+        src = src.replace(b'-', b'').replace(b'\0', b'')  # delete dashes and nulls
+        # src = src[-4:]  # keep last 4 characters only, i.e., "es13"
+
+        # destination identifier
+        dst = self.p[24:40]
+        dst = dst.replace(b'-', b'').replace(b'\0', b'')  # delete dashes and nulls
+
+        # get selector value
+        byte40 = struct.unpack('c', bytes([self.p[40]]))[0]
+        byte41 = struct.unpack('c', bytes([self.p[41]]))[0]
+        selector = ord(byte40) * 256 + ord(byte41)
+
+        # get data size
+        byte42 = struct.unpack('c', bytes([self.p[42]]))[0]
+        byte43 = struct.unpack('c', bytes([self.p[43]]))[0]
+        data_size = ord(byte42) * 256 + ord(byte43)
+
+        # print(msg_size)
+        # print(struct.unpack('H',  self.p[2:4]))
+
+        # print(struct.unpack('16c',  self.p[8:24]))
+
+        s = 'seq_num = ' + str(seq_num)
+        # s += ', sync bytes: ' + str(byte0) + ' and ' + str(byte1)
+        s += ', msg_size = ' + str(msg_size) + ' bytes'
+        s += ', chk_sum = ' + str(chk_sum)
+        s += ', src: ' + str(src.decode('utf-8'))
+        s += ', dst: ' + str(dst.decode('utf-8'))
+        s += ', selector = ' + str(selector)
+        s += ', data_size = ' + str(data_size)
+
+        return s

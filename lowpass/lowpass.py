@@ -13,6 +13,8 @@ from subprocess import getoutput
 
 from pylive import live_plot_xy
 from tshcal.secret import SDB, SUSER, SPASSWD
+from tshcal.common.tshes_params_packet import TshesMessage
+
 
 warnings.filterwarnings("ignore", ".*GUI is implemented")
 
@@ -633,6 +635,7 @@ class SamsTshEs(AccelPacket):
         self._header_ = {}
         self._Id_ = None
         self._head_ = None
+        self._counter_ = None
         self._rate_ = None
         self._gain_ = None
         self._unit_ = None
@@ -688,7 +691,7 @@ class SamsTshEs(AccelPacket):
         return  self._name_
 
     # return true if this appears to be a samsTshEs acceleration packet
-    def isSamsTshEsPacket(self): # struct.unpack doesn't seem to think 'h' is 2 bytes
+    def isSamsTshEsPacket(self):  # struct.unpack doesn't seem to think 'h' is 2 bytes
         if not self._samsTshEs_:
             if len(self.p) < 80:
                 self._samsTshEs_ = 0
@@ -697,11 +700,10 @@ class SamsTshEs(AccelPacket):
                     t = t + ' packet too short (%s) to be a samsTshEs acceleration packet' % len(self.p)
                     printLog(t)
                 return self._samsTshEs_
-            # byte0 = struct.unpack('c', self.p[0])[0]
-            # byte1 = struct.unpack('c', self.p[1])[0]
+
+            # get sync bytes & verify match for tsh
             byte0 = struct.unpack('c', bytes([self.p[0]]))[0]
             byte1 = struct.unpack('c', bytes([self.p[1]]))[0]
-            # if not (byte0 == chr(0xac) and byte1 == chr(0xd3)):
             if not (byte0 == bytes([0xac]) and byte1 == bytes([0xd3])):
                 self._samsTshEs_ = 0
                 if self._showWarnings_:
@@ -709,11 +711,15 @@ class SamsTshEs(AccelPacket):
                     t = t + ' packet cannot be samsTshEs accel because it does not start with 0xacd3'
                     printLog(t)
                 return self._samsTshEs_
-            # byte2 = struct.unpack('c', self.p[40])[0]
-            # byte3 = struct.unpack('c', self.p[41])[0]
+
+            tm = TshesMessage(self.p)
+            print(tm)
+
+            # get selector value
             byte2 = struct.unpack('c', bytes([self.p[40]]))[0]
             byte3 = struct.unpack('c', bytes([self.p[41]]))[0]
             selector = ord(byte2)*256+ord(byte3)
+
             accelpacket = (selector == 170) or (selector == 171)  # || (selector == 177)
             if not accelpacket:
                 self._samsTshEs_ = 0
@@ -749,6 +755,7 @@ class SamsTshEs(AccelPacket):
             self._header_['name'] = self.name()
             self._header_['Id'] = self.Id()
             self._header_['isSamsTshEsPacket'] = self.isSamsTshEsPacket()
+            self._header_['counter'] = self.counter()
             self._header_['status'] = self.status()
             self._header_['rate'] = self.rate()
             self._header_['gain'] = self.gain()
@@ -767,15 +774,26 @@ class SamsTshEs(AccelPacket):
             self._Id_ = self._Id_.replace(b'-', b'').replace(b'\0', b'')  # delete dashes and nulls
             self._Id_ = self._Id_[-4:]                   # keep last 4 characters only, i.e., "es13"
         return self._Id_
-        
+
+    def counter(self):
+        if not self._counter_:
+            self._counter_ = struct.unpack('!I', self.p[60:64])[0]  # Network byte order
+        return self._counter_
+
+    def time(self):
+        if not self._time_:
+            sec, usec = struct.unpack('!II', self.p[64:72])  # Network byte order
+            self._time_ = sec + usec/1000000.0
+        return self._time_
+
     def status(self): # packet status
         if not self._status_:
-            self._status_ = struct.unpack('!i', self.p[72:76])[0] # Network byte order
+            self._status_ = struct.unpack('!i', self.p[72:76])[0]  # Network byte order
         return self._status_
 
     def samples(self):
         if not self._samples_:
-            self._samples_ = struct.unpack('!i', self.p[76:80])[0] # Network byte order
+            self._samples_ = struct.unpack('!i', self.p[76:80])[0]  # Network byte order
         return self._samples_
 
     def rate(self):
@@ -921,12 +939,6 @@ class SamsTshEs(AccelPacket):
                 self._adjustment_ = 'temperature-compensation'
         return self._adjustment_
 
-    def time(self):
-        if not self._time_:
-            sec, usec = struct.unpack('!II', self.p[64:72]) # Network byte order
-            self._time_ = sec + usec/1000000.0
-        return self._time_
-    
     def endTime(self): 
         if not self._endTime_:
             self._endTime_ = self.time() + (self.samples()-1) / self.rate() 
@@ -1254,7 +1266,7 @@ def main(argv):
     # parse command line
     for p in argv[1:]:
         pair = p.split('=')
-        if (2 != len(pair)):
+        if 2 != len(pair):
             print('bad parameter: %s' % p)
             break
         else:
