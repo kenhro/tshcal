@@ -4,11 +4,11 @@ import sys
 import socket
 import json
 import datetime
-from secret import TSHES13_IPADDR, PIHOLE_IPADDR
+from tshcal.secret import TSHES13_IPADDR, PIHOLE_IPADDR
 
 
 def eric_example(ip_addr, port=9750):
-    """establish socket connection to tsh on data port (9750) as proof of concept by Eric Kelly"""
+    """establish socket connection to tsh on data port (9750); Eric's proof of concept"""
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((ip_addr, port))
@@ -56,11 +56,11 @@ def ken_json_echo_client_example(ip_addr, port, json_data):
 def main():
     """some other testing may be appropriate here too, but try this for now"""
 
-    HOST = TSHES13_IPADDR  # string with es13's ip address
-    HOST = '192.112.237.68'
-    PORT = 9750  # port used by tsh to transmit accel. data
-    eric_example(HOST, PORT)
-    sys.exit(0)
+    #HOST = TSHES13_IPADDR  # string with es13's ip address
+    #HOST = '192.112.237.68'
+    #PORT = 9750  # port used by tsh to transmit accel. data
+    #eric_example(HOST, PORT)
+    #sys.exit(0)
 
     # hit a simple echo server running on my pihole
     HOST = PIHOLE_IPADDR  # string with rpi server's ip address
