@@ -38,10 +38,16 @@ class TshesParamsPacket(object):
 
 
 class TshesMessage(object):
-    """A class to handle tshes message [packets?]."""
+    """A class to handle tshes message packets."""
 
     def __init__(self, p):
         self.p = p
+
+    def enum_bytes(self):
+        for idx, b in enumerate(self.p):
+            # print('{:<8}{:<#8x}{}'.format(idx, b, self.p[i:i+1]))
+            print('{:<8}{:<#8x}'.format(idx, b))
+        print('-.' * 22)
 
     def __str__(self):
 
