@@ -71,3 +71,4 @@ Tap into Python to control a 3-axis ESP motion controlled rig through a sequence
 - [ ] Ken improve low-pass filtering for large data count values and vastly improved plotting.
 - [ ] If possible, then have it so that acceleration client can either/or save to db table and pass values to subscribers (pub/sub).
 - [ ] Goal is to translate to Python from some of Daveware, C++ code, to handle TSH **commanding, housekeeping and acceleration data**.
+- [ ] Update docs, especially the spreadsheet there, to reflect latest version of SAMS Data & Command Format Definitions: Developers Edition (which is SAMS-SPC-005 Rev C).
