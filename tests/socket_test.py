@@ -5,9 +5,10 @@ import json
 import struct
 import socket
 import datetime
-from tshcal.secret import TSHES13_IPADDR, PIHOLE_IPADDR, STAN_IPADDR
+
+from tshcal.secret import TSHES13_IPADDR
 from tshcal.common.tshes_params_packet import TshesMessage
-from tshcal.lowpass.lowpass import SamsTshEs
+from tshcal.common.time_utils import unix_to_human_time
 
 
 def eric_example(ip_addr, port=9750):
@@ -28,7 +29,7 @@ def eric_example(ip_addr, port=9750):
 
 
 def raw_data_from_socket(ip_addr, port=9750):
-    """establish socket connection to tsh on data port (9750) and show raw data"""
+    """establish socket connection to tsh on data port (9750) and show pertinent data for confidence in this code"""
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((ip_addr, port))
@@ -67,20 +68,130 @@ def raw_data_from_socket(ip_addr, port=9750):
                     sec, usec = struct.unpack('!II', data[64:72])  # Network byte order
                     timestamp = sec + usec / 1000000.0
 
-                    # TODO convert timestamp to human readable
-
                     # packet_status
                     packet_status = struct.unpack('!i', data[72:76])[0]  # Network byte order
 
                     # number of samples
                     num_samples = struct.unpack('!i', data[76:80])[0]  # Network byte order
 
-                    # TODO get end_time from timestamp [which effectively is start_time], num_samples and rate
+                    # get rate and cutoff_freq from packet status
+                    rate_bits = (packet_status & 0x0f00) >> 8
+                    if (rate_bits == 0):
+                        rate, cutoff_freq = 7.8125, 3.2
+                    elif (rate_bits == 1):
+                        rate, cutoff_freq = 15.625, 6.3
+                    elif (rate_bits == 2):
+                        rate, cutoff_freq = 31.25, 12.7
+                    elif (rate_bits == 3):
+                        rate, cutoff_freq = 62.5, 25.3
+                    elif (rate_bits == 4):
+                        rate, cutoff_freq = 125.0, 50.6
+                    elif (rate_bits == 5):
+                        rate, cutoff_freq = 250.0, 101.4
+                    elif (rate_bits == 6):
+                        rate, cutoff_freq = 500.0, 204.2
+                    elif (rate_bits == 7):
+                        rate, cutoff_freq = 1000.0, 408.5
+                    elif (rate_bits == 8):
+                        rate, cutoff_freq = 125.0, 23.5
+                    else:
+                        # FIXME how do we gracefully proceed with wrong rate info?
+                        rate, cutoff_freq = 0.0, 0.0
 
-                    print(str(tm).replace('\n', ' '), tshes_id, counter, timestamp, packet_status, num_samples)
+                    # get gain and input from packet status
+                    gain_bits = packet_status & 0x001f
+                    if (gain_bits == 0):
+                        gain, input = 1.0, 'Ground'  # _input_ is not used as far as I can tell
+                    elif (gain_bits == 1):
+                        gain, input = 2.5, 'Ground'
+                    elif (gain_bits == 2):
+                        gain, input = 8.5, 'Ground'
+                    elif (gain_bits == 3):
+                        gain, input = 34.0, 'Ground'
+                    elif (gain_bits == 4):
+                        gain, input = 128.0, 'Ground'
+                    elif (gain_bits == 8):
+                        gain, input = 1.0, 'Test'
+                    elif (gain_bits == 9):
+                        gain, input = 2.5, 'Test'
+                    elif (gain_bits == 10):
+                        gain, input = 8.5, 'Test'
+                    elif (gain_bits == 11):
+                        gain, input = 34.0, 'Test'
+                    elif (gain_bits == 12):
+                        gain, input = 128.0, 'Test'
+                    elif (gain_bits == 16):
+                        gain, input = 1.0, 'Signal'
+                    elif (gain_bits == 17):
+                        gain, input = 2.5, 'Signal'
+                    elif (gain_bits == 18):
+                        gain, input = 8.5, 'Signal'
+                    elif (gain_bits == 19):
+                        gain, input = 34.0, 'Signal'
+                    elif (gain_bits == 20):
+                        gain, input = 128.0, 'Signal'
+                    elif (gain_bits == 24):
+                        gain, input = 1.0, 'Vref'
+                    elif (gain_bits == 25):
+                        gain, input = 1.0, 'Sensor test'
+                    elif (gain_bits == 26):
+                        gain, input = 2.0, 'Sensor test'
+                    else:
+                        # FIXME how do we gracefully proceed with wrong gain info?
+                        gain, input = 0.0, 'Unknown'
+
+                    # get unit from packet status
+                    unit_bits = (packet_status & 0x0060) >> 5
+                    if (unit_bits == 0):
+                        unit = 'counts'
+                    elif (unit_bits == 1):
+                        unit = 'volts'
+                    elif (unit_bits == 2):
+                        unit = 'g'
+                    else:
+                        # FIXME how do we gracefully proceed with wrong units info?
+                        unit = 'g'
+
+                    # get adjustment from packet status
+                    adj_bits = (packet_status & 0x0080) >> 7
+                    adjustment = 'no-compensation'
+                    if adj_bits == 1:
+                        adjustment = 'temperature-compensation'
+
+                    # compute end time from start, number of samples and rate
+                    end_time = timestamp + (num_samples - 1) / rate
+
+                    # get array of accel data
+                    xyz = []
+                    kludge_num_samples = int(len(data[80:]) / 16)
+                    # print(num_samples, kludge_num_samples)
+                    for i in range(kludge_num_samples):  # range(num_samples):
+                        start = 80 + 16 * i
+                        stop = start + 16
+                        # print(count, start, stop)
+                        # x, y, z, digitalIOstatus = struct.unpack('!fffI', data[start:stop])  # Network byte order
+                        # we are totally ignoring digital io status
+                        # self.handleDigitalIOstatus(digitalIOstatus, i)
+                        # if convert:
+                        #     x, y, z = x * mx + bx, y * my + by, z * mz + bz
+                        x, y, z, junk = struct.unpack('!fffI', data[start:stop])  # Network byte order
+                        xyz.append((x, y, z))
+
+                    print('tm:[', str(tm).replace('\n', ' '), ']', tshes_id, counter, unix_to_human_time(timestamp),
+                          packet_status, num_samples, rate, cutoff_freq, gain, input, unit, adjustment,
+                          unix_to_human_time(end_time))
+
+                    if False:
+                        c  = 0; print('%3d' % c, xyz[c])
+                        c += 1; print('%3d' % c, xyz[c])
+                        c += 1; print('%3d' % c, xyz[c])
+                        print('  :')
+                        c = kludge_num_samples - 3; print('%3d' % c, xyz[c])
+                        c += 1; print('%3d' % c, xyz[c])
+                        c += 1; print('%3d' % c, xyz[c])
 
                     # pkt = SamsTshEs(data)
-
+                    #
                     # print(pkt)
 
         else:
