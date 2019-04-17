@@ -11,7 +11,7 @@ import MySQLdb as sql
 import matplotlib.pyplot as plt
 from subprocess import getoutput
 
-from pylive import live_plot_xy
+from tshcal.lowpass.pylive import live_plot_xy
 from tshcal.secret import SDB, SUSER, SPASSWD
 from tshcal.common.tshes_params_packet import TshesMessage
 
@@ -258,12 +258,16 @@ class AccelPacket(object):
             for b in asc:
                 if c == 8:
                     line = line + '  '
-                line = line + '%02x ' % ord(b)
+                # line = line + '%02x ' % ord(b)
+                line = line + format(b, '02x') + ' '
                 c = c + 1
-            line = ljust(line, 58) + '"'
+            # line = ljust(line, 58) + '"'
+            line = line.ljust(58) + '"'
             # print ascii representation, replace unprintable characters with spaces
             for i in range(len(asc)):
-                if ord(asc[i])<32 or ord(asc[i]) == 209:
+                print(asc[i])
+                # if ord(asc[i]) < 32 or ord(asc[i]) == 209:
+                if asc[i] < 32 or asc[i] == 209:
                     asc = replace(asc, asc[i], ' ')
             line = line + asc + '"\n'  
             self._hex_ = self._hex_ + line
@@ -712,6 +716,7 @@ class SamsTshEs(AccelPacket):
                     printLog(t)
                 return self._samsTshEs_
 
+            # examine header/wrapper around our "Data", TshesAccelPacket, which starts at byte 44 of a "tshes message"
             tm = TshesMessage(self.p)
             print(tm)
 
@@ -766,7 +771,8 @@ class SamsTshEs(AccelPacket):
             self._header_['endTime'] = self.endTime()
         return self._header_
         
-    def Id(self): 
+    def Id(self):
+        """16 bytes starting at byte 44 of a tshes message are first 16 bytes [char:tshes_id] of TshesAccelPacket"""
         if not self._Id_:
             self._Id_ = self.p[44:60]
             # self._Id_ = replace(self._Id_ , chr(0), '')  # delete nulls
@@ -776,27 +782,34 @@ class SamsTshEs(AccelPacket):
         return self._Id_
 
     def counter(self):
+        """4 bytes starting at byte 60 of a tshes message are [unsigned int:counter] of TshesAccelPacket"""
         if not self._counter_:
             self._counter_ = struct.unpack('!I', self.p[60:64])[0]  # Network byte order
         return self._counter_
 
     def time(self):
+        """8 bytes starting at byte 64 of a tshes message are [timeval:timestamp] of TshesAccelPacket"""
         if not self._time_:
             sec, usec = struct.unpack('!II', self.p[64:72])  # Network byte order
             self._time_ = sec + usec/1000000.0
         return self._time_
 
-    def status(self): # packet status
+    def status(self):
+        """4 bytes starting at byte 72 of a tshes message are [int:packet_status] of TshesAccelPacket"""
         if not self._status_:
             self._status_ = struct.unpack('!i', self.p[72:76])[0]  # Network byte order
         return self._status_
 
     def samples(self):
+        """4 bytes starting at byte 76 of a tshes message are [int:num_samples] of TshesAccelPacket"""
         if not self._samples_:
             self._samples_ = struct.unpack('!i', self.p[76:80])[0]  # Network byte order
         return self._samples_
 
+    # see xyz method; rest of bytes starting at byte 80 of tshes message are [AccelSample:accel_data] of TshesAccelPacket
+
     def rate(self):
+        """get rate bits from status int"""
         if not self._rate_:
             statusInt = self.status()
             rateBits = (statusInt & 0x0f00) >> 8
@@ -839,6 +852,7 @@ class SamsTshEs(AccelPacket):
         return self._rate_
     
     def gain(self):
+        """get gain bits from status int"""
         if not self._gain_:
             statusInt = self.status()
             gainBits = statusInt & 0x001f
@@ -908,6 +922,7 @@ class SamsTshEs(AccelPacket):
         return self._gain_
 
     def unit(self):
+        """get unit bits from status int"""
         if not self._unit_:
             statusInt = self.status()
             unitBits = (statusInt & 0x0060) >> 5
@@ -929,6 +944,7 @@ class SamsTshEs(AccelPacket):
         return self._unit_
 
     def adjustment(self):
+        """get adjustment bits from status int"""
         if not self._adjustment_:
             statusInt = self.status()
             adjBits = (statusInt & 0x0080) >> 7
@@ -939,7 +955,8 @@ class SamsTshEs(AccelPacket):
                 self._adjustment_ = 'temperature-compensation'
         return self._adjustment_
 
-    def endTime(self): 
+    def endTime(self):
+        """compute end time from start, number of samples and rate"""
         if not self._endTime_:
             self._endTime_ = self.time() + (self.samples()-1) / self.rate() 
         return self._endTime_
@@ -961,6 +978,7 @@ class SamsTshEs(AccelPacket):
                 DigitalIOstatusHolder[self.name()] = inputIO
 
     def xyz(self):
+        """xyz array of accel_data"""
         if not self._xyz_:
             convert = 0
 ##            if self.unit() != 'g':   #### need calibration numbers for flight units
@@ -984,7 +1002,7 @@ class SamsTshEs(AccelPacket):
             for i in range(self.samples()):
                 start = 80+16*i
                 stop = start+16
-                x, y, z, digitalIOstatus = struct.unpack('!fffI', self.p[start:stop]) # Network byte order
+                x, y, z, digitalIOstatus = struct.unpack('!fffI', self.p[start:stop])  # Network byte order
                 self.handleDigitalIOstatus(digitalIOstatus, i)
                 if convert:
                     x, y, z = x*mx+bx, y*my+by, z*mz+bz
@@ -992,6 +1010,7 @@ class SamsTshEs(AccelPacket):
         return self._xyz_
     
     def txyz(self):
+        """txyz array of accel_data"""
         if not self._txyz_:
             dt = 1.0/self.rate()
             convert = 0
