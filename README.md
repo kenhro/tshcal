@@ -8,26 +8,22 @@ These instructions will get you started with a copy of the project on your local
 
 ### Prerequisites
 
-What things you need to install the software and how to install them
-
-```
-Give examples
-```
+You can use pip to install dependencies, something like so: `pip3 install -r requirements.txt`
 
 ### Installing
 
-A step by step series of examples that tell you how to get a development env running
+A step by step series of steps (and representative set of examples) will eventually go here that tell you how to get tshcal code running for various needs (e.g. lowpass filtering just display, show packets coming from TSH via socket connection and, of course, calibration routine).
 
-Say what the step will be
+Show steps here, then...
 
 ```
 Give the example
 ```
 
-And repeat
+Other steps for something else, then a representative...
 
 ```
-until finished
+example goes here
 ```
 
 End with an example of getting some data out of the system or using it for a little demo
@@ -43,38 +39,17 @@ Explain what these tests test and why
 ```
 Give an example
 ```
-
-### And coding style tests
-
-Explain what these tests test and why
-
-```
-Give an example
-```
-
 ## Deployment
 
 Add additional notes about how to deploy this on a live system
 
-## Built With
-
-* [Dropwizard](http://www.dropwizard.io/1.0.2/docs/) - The web framework used
-* [Maven](https://maven.apache.org/) - Dependency Management
-* [ROME](https://rometools.github.io/rome/) - Used to generate RSS Feeds
-
-## Contributing
-
-Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on our code of conduct, and the process for submitting pull requests to us.
-
-## Versioning
-
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags). 
-
 ## Authors
 
-* **Billie Thompson** - *Initial work* - [PurpleBooth](https://github.com/PurpleBooth)
+* **Ken Hrovat** - *What major things did this guy do?*
+* **Eric Kelly** - *Succinctly state what The Maestro did here.*
+* **William Brown** - *Better words for summer of coding at NASA.*
 
-See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
+Shout out to Jennifer Keller goes here too..
 
 ## License
 
@@ -91,8 +66,8 @@ Tap into Python to control a 3-axis ESP motion controlled rig through a sequence
 ### Roadmap
 
 - [x] 2/28/19 Eric and Ken discuss big picture.
-- [ ] Eric doing preliminary work with sockets to read data streaming from TSH.
-- [ ] Ken get skeleton going for configuration, logging and argument parsing.
+- [x] Eric doing preliminary work with sockets to read data streaming from TSH.
+- [x] Ken get skeleton going for configuration, logging and argument parsing.
 - [ ] Ken improve low-pass filtering for large data count values and vastly improved plotting.
 - [ ] If possible, then have it so that acceleration client can either/or save to db table and pass values to subscribers (pub/sub).
 - [ ] Goal is to translate to Python from some of Daveware, C++ code, to handle TSH **commanding, housekeeping and acceleration data**.
