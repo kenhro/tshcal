@@ -45,9 +45,9 @@ Add additional notes about how to deploy this on a live system
 
 ## Authors
 
-* **Ken Hrovat** - *What major things did this guy do?*
 * **Eric Kelly** - *Succinctly state what The Maestro did here.*
 * **William Brown** - *Better words for summer of coding at NASA.*
+* **Ken Hrovat** - *What did this guy do?*
 
 Shout out to Jennifer Keller goes here too..
 
