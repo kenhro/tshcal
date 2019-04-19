@@ -51,10 +51,6 @@ class TshesMessage(object):
 
     def __str__(self):
 
-        # for idx, b in enumerate(self.p):
-        #     # print('{:<8}{:<#8x}{}'.format(idx, b, self.p[i:i+1]))
-        #     print('{:<8}{:<#8x}'.format(idx, b))
-
         # two sync bytes
         byte0 = struct.unpack('c', bytes([self.p[0]]))[0]
         byte1 = struct.unpack('c', bytes([self.p[1]]))[0]
@@ -100,10 +96,10 @@ class TshesMessage(object):
 
         # print(struct.unpack('16c',  self.p[8:24]))
 
-        s = 'seq_num = ' + str(seq_num)
-        # s += ', sync bytes: ' + str(byte0) + ' and ' + str(byte1)
+        s = 'seq_num = ' + '{:>5d}'.format(seq_num)
+        s += ', sync bytes: ' + str(byte0) + ' & ' + str(byte1)
         s += ', msg_size = ' + str(msg_size) + ' bytes'
-        s += ', chk_sum = ' + str(chk_sum)
+        s += ', chk_sum = ' + '{:>6d}'.format(chk_sum)
         s += ', src: ' + str(src.decode('utf-8'))
         s += ', dst: ' + str(dst.decode('utf-8'))
         s += ', selector = ' + str(selector)
