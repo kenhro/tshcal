@@ -10,6 +10,7 @@ import numpy as np
 from tshcal.secret import TSHES13_IPADDR
 from tshcal.common.tshes_params_packet import TshesMessage
 from tshcal.common.time_utils import unix_to_human_time
+from tshcal.common.plot_utils import TshRealtimePlot
 
 
 def eric_example(ip_addr, port=9750):
@@ -49,15 +50,49 @@ def recvall(sock, n):
     return data
 
 
+def print_header():
+    """something to keep things straight for raw data from socket deal"""
+    s = [
+    'recv',
+    'seqnum',
+    'sync',
+    'msiz',
+    'cksum',
+    ' source',
+    'destin',
+    'sel',
+    'dsiz',
+    ' tsh',
+    '   counter',
+    (18 * ' ') + 'start',
+    'pstat',
+    'num',
+    'fsrate',
+    'cutoff',
+    'gain',
+    ' input',
+    '  unit',
+    '     adjustment',
+    (20 * ' ') + 'end',
+    'rec',
+    'LOB',
+    'def',
+    'need']
+    print(' '.join(s))
+
+
 def raw_data_from_socket(ip_addr, port=9750):
     """establish socket connection to [tsh] (ip_addr)ess on data port (9750) and show pertinent data"""
+
+    print_header()
+    previous_count = -1
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((ip_addr, port))
         while True:
             data = s.recv(8192)  # FIXME power of 2 is recommended, but not sure what optimum value to use here
             if data:
-                if len(data) >= 16:  # FIXME Why was this value 80 in Ted's code [maybe it was MySQL db goodness?]
+                if len(data) >= 16:  # FIXME Why 80 in Ted's code [maybe it was MySQL db goodness?]; MAYBE > ZERO??
 
                     # get selector value
                     byte2 = struct.unpack('c', bytes([data[40]]))[0]
@@ -82,6 +117,11 @@ def raw_data_from_socket(ip_addr, port=9750):
                         # counter
                         counter = struct.unpack('!I', data[60:64])[0]  # Network byte order
 
+                        # let's throw in a line with dashes near counter when we detect one or more missing count
+                        if counter - previous_count != 1:
+                            print(' '*60 + '-'*7)
+                        previous_count = counter
+
                         # timestamp
                         sec, usec = struct.unpack('!II', data[64:72])  # Network byte order
                         timestamp = sec + usec / 1000000.0
@@ -94,23 +134,23 @@ def raw_data_from_socket(ip_addr, port=9750):
 
                         # get rate and cutoff_freq from packet status
                         rate_bits = (packet_status & 0x0f00) >> 8
-                        if (rate_bits == 0):
+                        if rate_bits == 0:
                             rate, cutoff_freq = 7.8125, 3.2
-                        elif (rate_bits == 1):
+                        elif rate_bits == 1:
                             rate, cutoff_freq = 15.625, 6.3
-                        elif (rate_bits == 2):
+                        elif rate_bits == 2:
                             rate, cutoff_freq = 31.25, 12.7
-                        elif (rate_bits == 3):
+                        elif rate_bits == 3:
                             rate, cutoff_freq = 62.5, 25.3
-                        elif (rate_bits == 4):
+                        elif rate_bits == 4:
                             rate, cutoff_freq = 125.0, 50.6
-                        elif (rate_bits == 5):
+                        elif rate_bits == 5:
                             rate, cutoff_freq = 250.0, 101.4
-                        elif (rate_bits == 6):
+                        elif rate_bits == 6:
                             rate, cutoff_freq = 500.0, 204.2
-                        elif (rate_bits == 7):
+                        elif rate_bits == 7:
                             rate, cutoff_freq = 1000.0, 408.5
-                        elif (rate_bits == 8):
+                        elif rate_bits == 8:
                             rate, cutoff_freq = 125.0, 23.5
                         else:
                             # FIXME how do we gracefully proceed with wrong rate info?
@@ -118,53 +158,53 @@ def raw_data_from_socket(ip_addr, port=9750):
 
                         # get gain and input from packet status
                         gain_bits = packet_status & 0x001f
-                        if (gain_bits == 0):
-                            gain, input = 1.0, 'Ground'  # _input_ is not used as far as I can tell
-                        elif (gain_bits == 1):
-                            gain, input = 2.5, 'Ground'
-                        elif (gain_bits == 2):
-                            gain, input = 8.5, 'Ground'
-                        elif (gain_bits == 3):
-                            gain, input = 34.0, 'Ground'
-                        elif (gain_bits == 4):
-                            gain, input = 128.0, 'Ground'
-                        elif (gain_bits == 8):
-                            gain, input = 1.0, 'Test'
-                        elif (gain_bits == 9):
-                            gain, input = 2.5, 'Test'
-                        elif (gain_bits == 10):
-                            gain, input = 8.5, 'Test'
-                        elif (gain_bits == 11):
-                            gain, input = 34.0, 'Test'
-                        elif (gain_bits == 12):
-                            gain, input = 128.0, 'Test'
-                        elif (gain_bits == 16):
-                            gain, input = 1.0, 'Signal'
-                        elif (gain_bits == 17):
-                            gain, input = 2.5, 'Signal'
-                        elif (gain_bits == 18):
-                            gain, input = 8.5, 'Signal'
-                        elif (gain_bits == 19):
-                            gain, input = 34.0, 'Signal'
-                        elif (gain_bits == 20):
-                            gain, input = 128.0, 'Signal'
-                        elif (gain_bits == 24):
-                            gain, input = 1.0, 'Vref'
-                        elif (gain_bits == 25):
-                            gain, input = 1.0, 'Sensor test'
-                        elif (gain_bits == 26):
-                            gain, input = 2.0, 'Sensor test'
+                        if gain_bits == 0:
+                            gain, inp = 1.0, 'Ground'  # _input_ is not used as far as I can tell
+                        elif gain_bits == 1:
+                            gain, inp = 2.5, 'Ground'
+                        elif gain_bits == 2:
+                            gain, inp = 8.5, 'Ground'
+                        elif gain_bits == 3:
+                            gain, inp = 34.0, 'Ground'
+                        elif gain_bits == 4:
+                            gain, inp = 128.0, 'Ground'
+                        elif gain_bits == 8:
+                            gain, inp = 1.0, 'Test'
+                        elif gain_bits == 9:
+                            gain, inp = 2.5, 'Test'
+                        elif gain_bits == 10:
+                            gain, inp = 8.5, 'Test'
+                        elif gain_bits == 11:
+                            gain, inp = 34.0, 'Test'
+                        elif gain_bits == 12:
+                            gain, inp = 128.0, 'Test'
+                        elif gain_bits == 16:
+                            gain, inp = 1.0, 'Signal'
+                        elif gain_bits == 17:
+                            gain, inp = 2.5, 'Signal'
+                        elif gain_bits == 18:
+                            gain, inp = 8.5, 'Signal'
+                        elif gain_bits == 19:
+                            gain, inp = 34.0, 'Signal'
+                        elif gain_bits == 20:
+                            gain, inp = 128.0, 'Signal'
+                        elif gain_bits == 24:
+                            gain, inp = 1.0, 'Vref'
+                        elif gain_bits == 25:
+                            gain, inp = 1.0, 'Sensor test'
+                        elif gain_bits == 26:
+                            gain, inp = 2.0, 'Sensor test'
                         else:
                             # FIXME how do we gracefully proceed with wrong gain info?
-                            gain, input = 0.0, 'Unknown'
+                            gain, inp = 0.0, 'Unknown'
 
                         # get unit from packet status
                         unit_bits = (packet_status & 0x0060) >> 5
-                        if (unit_bits == 0):
+                        if unit_bits == 0:
                             unit = 'counts'
-                        elif (unit_bits == 1):
+                        elif unit_bits == 1:
                             unit = 'volts'
-                        elif (unit_bits == 2):
+                        elif unit_bits == 2:
                             unit = 'g'
                         else:
                             # FIXME how do we gracefully proceed with wrong units info?
@@ -198,25 +238,46 @@ def raw_data_from_socket(ip_addr, port=9750):
                             #     x, y, z = x * mx + bx, y * my + by, z * mz + bz
                             xyz.append((x, y, z))
 
-                        # keep remainder bytes and prepend to balance of samples called for in TshesAccelPacket struct
+                        # NOTE: This next bit of code shows we now know we're dealing with stream-based protocol!
+
+                        # keep remainder bytes & prepend'em to balance of samples we'll get for TshesAccelPacket struct
                         more_data = data[stop:]
                         more_data += recvall(s, deficit_bytes)  # remainder of bytes we need to get num_samples filled
 
-                        # append deficit samples to get num_samples in total
+                        # append deficit samples to get a total of num_samples (promised in TshesAccelPacket's "Prefix")
                         for i in range(deficit_samples):
                             start = 16 * i
                             stop = start + 16
                             x, y, z, dio = struct.unpack('!fffI', more_data[start:stop])  # Network byte order
                             xyz.append((x, y, z))
 
-                        print('len(data) = %d' % len(data), 'tm:[', str(tm).replace('\n', ' '), ']', tshes_id, counter,
-                              unix_to_human_time(timestamp), packet_status, num_samples, rate, cutoff_freq, gain,
-                              input, unit, adjustment, unix_to_human_time(end_time), received_samples, left_over_bytes,
-                              deficit_samples, stop)
+                        # print('len(data) = %d' % len(data), 'tm:[', str(tm).replace('\n', ' '), ']', tshes_id, counter,
+                        #       unix_to_human_time(timestamp), packet_status, num_samples, rate, cutoff_freq, gain,
+                        #       input, unit, adjustment, unix_to_human_time(end_time), received_samples, left_over_bytes,
+                        #       deficit_samples, stop)
 
-                        # print('%3d' % 0, xyz[0])
-                        # print('  :')
-                        # print('%3d' % len(xyz), xyz[-1])
+                        print("{:>4} {} {:>4s} {:>10d} {} {:>5d} {:>3d} {:>6.1f} {:>6.2f} {:>4.1f} {:>6s}"
+                              " {:>6s} {:>15s} {} {:>3d} {:>3d} {:>3d} {:>4d}".format(
+                            len(data),
+                            str(tm).replace('\n', ' '),
+                            tshes_id.decode('utf-8'),
+                            counter,
+                            unix_to_human_time(timestamp),
+                            packet_status,
+                            num_samples,
+                            rate,
+                            cutoff_freq,
+                            gain,
+                            inp,
+                            unit,
+                            adjustment,
+                            unix_to_human_time(end_time),
+                            received_samples,
+                            left_over_bytes,
+                            deficit_samples,
+                            stop - left_over_bytes
+                        )
+                        )
 
                 else:
                     print('unhandled branch with len(data) = %d' % len(data))
@@ -261,7 +322,9 @@ def main():
     #HOST = '192.112.237.68'
     PORT = 9750  # port used by tsh to transmit accel. data
     #eric_example(HOST, PORT)
-    raw_data_from_socket(HOST, PORT)
+    # SINK = TshRealtimePlot()
+    # SINK.run()
+    raw_data_from_socket(HOST, PORT)  #, SINK)
     sys.exit(0)
 
     # hit a simple echo server running on my pihole

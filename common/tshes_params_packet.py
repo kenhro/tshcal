@@ -91,18 +91,17 @@ class TshesMessage(object):
         byte43 = struct.unpack('c', bytes([self.p[43]]))[0]
         data_size = ord(byte42) * 256 + ord(byte43)
 
-        # print(msg_size)
-        # print(struct.unpack('H',  self.p[2:4]))
+        # s += ', sync bytes: ' + str(byte0) + ' & ' + str(byte1)
 
-        # print(struct.unpack('16c',  self.p[8:24]))
-
-        s = 'seq_num = ' + '{:>5d}'.format(seq_num)
-        s += ', sync bytes: ' + str(byte0) + ' & ' + str(byte1)
-        s += ', msg_size = ' + str(msg_size) + ' bytes'
-        s += ', chk_sum = ' + '{:>6d}'.format(chk_sum)
-        s += ', src: ' + str(src.decode('utf-8'))
-        s += ', dst: ' + str(dst.decode('utf-8'))
-        s += ', selector = ' + str(selector)
-        s += ', data_size = ' + str(data_size)
+        s = '{:>6d} {:2s}{:2s} {:>4d} {:>5d} {:>7s} {:>6s} {:>3d} {:>4d}'.format(
+            seq_num,
+            byte0.hex(),
+            byte1.hex(),
+            msg_size,
+            chk_sum,
+            str(src.decode('utf-8')),
+            str(dst.decode('utf-8')),
+            selector,
+            data_size)
 
         return s
