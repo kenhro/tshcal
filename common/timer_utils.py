@@ -34,34 +34,48 @@ def hello(name):
     print("Hello %s!" % name)
 
 
-def byte_counter(st, bc):
-    dur = (datetime.datetime.now() - st).total_seconds()
-    print(dur, bc.bytes)
+def print_bytes_counter(my_bc):
+    print(my_bc)
 
 
 class BytesCounter(object):
 
-    def __init__(self, bytes):
-        self.bytes = bytes
+    def __init__(self):
+        self.byte_count = 0
         self.start_time = datetime.datetime.now()
 
+    def __str__(self):
+        return 'sec = %f, count = %d bytes' % (self.total_seconds(), self.byte_count)
+
+    def total_seconds(self):
+        return (datetime.datetime.now() - self.start_time).total_seconds()
+
     def add(self, b):
-        self.bytes += b
+        self.byte_count += b
 
 
 if __name__ == '__main__':
 
-    bytes_count = BytesCounter(0)
+    bc = BytesCounter()
 
     print("starting...")
-    rt = RepeatedTimer(1, byte_counter, start_time, bytes_count)  # auto-starts, no need of rt.start()
+    rt = RepeatedTimer(1, print_bytes_counter, bc)  # auto-starts, no need of rt.start()
     try:
         sleep(1)  # your long-running job goes here...
-        bytes_count.add(2)
+
+        bc.add(2)
+        print(bc)
+
         sleep(1)
-        bytes_count.add(3)
+
+        bc.add(3)
+        print(bc)
+
         sleep(1)
-        bytes_count.add(1)
+
+        bc.add(1)
+        print(bc)
+
         sleep(2)
     finally:
         rt.stop()  # better in a try/finally block to make sure the program ends!
