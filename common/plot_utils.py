@@ -12,16 +12,23 @@ import matplotlib.dates as mdates
 from tshcal.common.sci_utils import is_outlier
 
 
-DISP_PTS = 1600  # FIXME display width (num pts) for WHAT length of time [use rate to reckon pts]
-PKT_SIZE = 256  # we get like 256 or 512 (per second) as typical for TSH -- right?
-SLIDE_PTS = 25  # number of data points to "slide" to the left
+DISP_SEC = 8.192 # display width in seconds
+DISP_PTS = 2048  # FIXME display width (num pts) for WHAT length of time [use rate to reckon pts]
+GUTTER_PTS = 24  # number of pts on either side of display to suppress (i.e. suppress filtering edge effects)
+PKT_SIZE =  256  # we get like 256 or 512 (per second) as typical for TSH -- right?
+SLIDE_PTS = 128  # number of data points to "slide" to the left
 
 
 class RealtimePlot(object):
 
-    def __init__(self, disp_pts=DISP_PTS):
+    def __init__(self, fs, disp_pts=DISP_PTS, gutter_pts=GUTTER_PTS, filt=None, mask_outlier=False, relative=True):
 
+        self.fs = fs
         self.disp_pts = disp_pts
+        self.gutter_pts = gutter_pts
+        self.filt = filt
+        self.mask_outlier = mask_outlier
+        self.relative = relative
         self.axis_x = deque(maxlen=self.disp_pts)
         self.axis_y = deque(maxlen=self.disp_pts)
 
@@ -39,11 +46,44 @@ class RealtimePlot(object):
         # self.axes.fmt_xdata = mdates.DateFormatter('%M:%s')
         self.fig.autofmt_xdate()
 
+    def get_relative_times(self, y):
+        # helper = np.vectorize(lambda x: x.total_seconds())
+        # return helper(t - t[0])
+        return np.arange(len(y)) / self.fs
+
     def add(self, xvals, yvals):
         self.axis_x.extend(xvals)
         self.axis_y.extend(yvals)
-        self.lineplot.set_data(self.axis_x, self.axis_y)
-        self.axes.set_xlim(self.axis_x[0], self.axis_x[-1] + datetime.timedelta(seconds=1e-6))
+
+        # apply filter as needed
+        if self.filt:
+            y_values = self.filt.apply(np.array(self.axis_y))
+        else:
+            y_values = np.array(self.axis_y)  # no filtering
+
+        # set gutter pts on either end of signal to NaN
+        if self.gutter_pts:
+            y_values[0:self.gutter_pts] = None
+            y_values[-self.gutter_pts:] = None
+
+        # mask outliers as needed
+        if self.mask_outlier:
+            y_values = np.ma.array(y_values, mask=is_outlier(y_values))
+
+        # make x-values relative as needed
+        if self.relative:
+            x_values = self.get_relative_times(y_values)
+        else:
+            x_values = np.array(self.axis_x)
+
+        xmin = x_values[0]
+        xmax = x_values[-1]
+
+        # self.lineplot.set_data(self.axis_x, self.axis_y)
+        # self.axes.set_xlim(self.axis_x[0], self.axis_x[-1] + datetime.timedelta(seconds=1e-6))
+
+        self.lineplot.set_data(x_values, y_values)
+        self.axes.set_xlim(xmin, xmax)
         self.axes.relim()
         self.axes.autoscale_view(scaley=True)  # rescale the x-axis
 
@@ -70,42 +110,43 @@ class RealtimePlot(object):
 
 class TshRealtimePlot(RealtimePlot):
 
-    def __init__(self, disp_pts=DISP_PTS):
+    def __init__(self, fs, disp_pts=DISP_PTS, gutter_pts=GUTTER_PTS, filt=None, mask_outlier=False, relative=True):
 
-        super().__init__(disp_pts=disp_pts)
+        super().__init__(fs, disp_pts=disp_pts, gutter_pts=gutter_pts, filt=filt, mask_outlier=mask_outlier, relative=relative)
 
-        # set figure to be sure we got right one for these next settings
+        # # set figure to be sure we got right one for these next settings
         # plt.figure(self.fig.number)
-
+        #
         # # establish ymin textbox
         # initial_ymin = "-100000"
-        # self.ax_ymin = plt.axes([0.05, 0.06, 0.04, 0.045])
+        # self.ax_ymin = plt.axes((0.05, 0.06, 0.04, 0.045))
         # self.submit_ylim('bottom', initial_ymin)
         # self.txtbox_ymin = TextBox(self.ax_ymin, 'ymin', initial=initial_ymin)
         # self.txtbox_ymin.on_submit(self.submit_ymin)
         #
         # # establish ymax textbox
         # initial_ymax = "-150000"
-        # self.ax_ymax = plt.axes([0.05, 0.9, 0.04, 0.045])
+        # self.ax_ymax = plt.axes((0.05, 0.9, 0.04, 0.045))
         # self.submit_ylim('top', initial_ymax)
         # self.txtbox_ymax = TextBox(self.ax_ymax, 'ymax', initial=initial_ymax)
         # self.txtbox_ymax.on_submit(self.submit_ymax)
-
+        #
         # # establish tspan textbox
         # initial_tspan = "30"  # seconds
-        # self.ax_tspan = plt.axes([0.25, 0.06, 0.04, 0.045])
+        # self.ax_tspan = plt.axes((0.25, 0.06, 0.04, 0.045))
         # self.submit_tspan(initial_tspan)
         # self.txtbox_tspan = TextBox(self.ax_tspan, 'tspan', initial=initial_tspan)
         # self.txtbox_tspan.on_submit(self.submit_tspan)
 
-    # def submit_tspan(self, txt):
-    #     val = float(txt)
-    #     # ax = self.ax ax.get_yaxis()
-    #     # tmin, tmax = self.axes.get_xlim()
-    #     # tmax = mdates.num2date(tmax)
-    #     # tmin = tmax - datetime.timedelta(seconds=val)
-    #     # self.axes.set_xlim([tmin, tmax])
-    #     time.sleep(0.25)
+    def submit_tspan(self, txt):
+        # val = float(txt)
+        # ax = self.ax ax.get_yaxis()
+        # tmin, tmax = self.axes.get_xlim()
+        # tmax = mdates.num2date(tmax)
+        # tmin = tmax - datetime.timedelta(seconds=val)
+        # self.axes.set_xlim([tmin, tmax])
+        # time.sleep(0.25)
+        pass
 
     def run(self):
 
@@ -115,13 +156,13 @@ class TshRealtimePlot(RealtimePlot):
         delta_sec = 1
 
         while True:
-            # let's ballpark it takes about 3-4 seconds for loop to get from and back to this point
-            # print(datetime.datetime.now())
+            # ballpark it takes about 4 seconds or so for loop to get from and back to this point
+            print('run while loop:', datetime.datetime.now())
 
             t_values = np.array([base_time + datetime.timedelta(seconds=i) for i in range(PKT_SIZE)])
             y_values = np.linspace(1.0, PKT_SIZE, num=PKT_SIZE) + np.random.standard_normal(PKT_SIZE) * 40.0
 
-            # add in slide_pts at a time
+            # add in SLIDE_PTS at a time (this to avoid large horizontal jumps along time axis with each disp cycle)
             i1 = 0
             while i1 < len(y_values):
                 i2 = i1 + SLIDE_PTS

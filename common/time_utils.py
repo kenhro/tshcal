@@ -118,7 +118,7 @@ def demo_bytes_counter(interval_sec=60):
     # create object to count bytes (holds cumulative bytes and seconds to give bytes/sec)
     bc = BytesCounter()
 
-    # TODO change print functions to log functions via a verbose setting (not just print)
+    # TODO change print to log via a verbose setting (not just print)
 
     # start a timer that triggers interval number of seconds and prints bytes/sec info
     print("RepeatedTimer starting (triggers every %d sec)..." % interval_sec)

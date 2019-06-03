@@ -9,9 +9,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from tshcal.secret import TSHES13_IPADDR
+from tshcal.filters.lowpass import ButterworthLowpassFilt
 from tshcal.common.tshes_params_packet import TshesMessage
 from tshcal.common.time_utils import unix_to_human_time
-from tshcal.common.plot_utils import TshRealtimePlot, PKT_SIZE, SLIDE_PTS
+from tshcal.common.plot_utils import TshRealtimePlot
 from tshcal.common.sci_utils import is_outlier
 
 
@@ -83,13 +84,11 @@ def print_header():
     print(' '.join(s))
 
 
-def raw_data_from_socket(ip_addr, port=9750):
+def raw_data_from_socket(ip_addr, bytes_ctr, port=9750):
     """establish socket connection to [tsh] (ip_addr)ess on data port (9750) and show pertinent data"""
 
     print_header()
     previous_count = -1
-
-    start_timer, byte_counter = datetime.datetime.now(), 0
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((ip_addr, port))
@@ -97,10 +96,6 @@ def raw_data_from_socket(ip_addr, port=9750):
             data = s.recv(8192)  # FIXME power of 2 is recommended, but not sure what optimum value to use here
             if data:
                 if len(data) >= 16:  # FIXME Why 80 in Ted's code [maybe it was MySQL db goodness?]; MAYBE > ZERO??
-
-                    byte_counter += len(data)
-                    # if timer > ten_seconds:
-                    #     print('bytes per second')
 
                     # get selector value
                     byte2 = struct.unpack('c', bytes([data[40]]))[0]
@@ -125,7 +120,7 @@ def raw_data_from_socket(ip_addr, port=9750):
                         # counter
                         counter = struct.unpack('!I', data[60:64])[0]  # Network byte order
 
-                        # let's throw in a line with dashes near counter when we detect one or more missing count
+                        # let's throw in a line with dashes near counter column when we detect one or more missing count
                         if counter - previous_count != 1:
                             print(' '*60 + '-'*7)
                         previous_count = counter
@@ -300,15 +295,19 @@ def axis_str2idx(a):
     return d[a.lower()[0]]
 
 
-def plot_raw_data_from_socket(ax, ip_addr, port=9750):
+def plot_raw_data_from_socket(fs, fc, ax, ip_addr, port=9750, norder=4, has_nan=False):
     """establish socket connection to [tsh] (ip_addr)ess on port (9750) and plot (ax)is"""
 
-    display = TshRealtimePlot()
+    # create 4th order low-pass butterworth filter
+    lowpass_filt = ButterworthLowpassFilt(fs, fc, norder=norder, has_nan=has_nan)
+
+    disp_sec = 30
+    disp_pts = int(np.ceil(fs * disp_sec))
+    display = TshRealtimePlot(fs, disp_pts=disp_pts, filt=lowpass_filt, mask_outlier=True)
 
     # other parameters related to plotting
-    sleep_sec = 0.1  # a built-in breather for animated plotting loop (keep this less than 0.25 seconds or so)
-    base_time = datetime.datetime(1970, 1, 1)
-    delta_sec = 1
+    sleep_sec = 0.05  # a built-in breather for animated plotting loop (keep this less than 0.25 seconds or so)
+    # delta_sec = 1.0 / fs
 
     print_header()
     previous_count = -1
@@ -382,6 +381,9 @@ def plot_raw_data_from_socket(ax, ip_addr, port=9750):
                             # FIXME how do we gracefully proceed with wrong rate info?
                             rate, cutoff_freq = 0.0, 0.0
 
+                        if rate != fs:
+                            raise RuntimeError('sample rate does not match fs input')
+
                         # get gain and input from packet status
                         gain_bits = packet_status & 0x001f
                         if gain_bits == 0:
@@ -421,7 +423,7 @@ def plot_raw_data_from_socket(ax, ip_addr, port=9750):
                         elif gain_bits == 26:
                             gain, inp = 2.0, 'Sensor test'
                         else:
-                            # FIXME how do we gracefully proceed with wrong gain info?
+                            # FIXME how do we gracefully proceed with wrong gain info? or do we?
                             gain, inp = 0.0, 'Unknown'
 
                         # get unit from packet status
@@ -433,7 +435,7 @@ def plot_raw_data_from_socket(ax, ip_addr, port=9750):
                         elif unit_bits == 2:
                             unit = 'g'
                         else:
-                            # FIXME how do we gracefully proceed with wrong units info?
+                            # FIXME how do we gracefully proceed with wrong units info? or do we?
                             unit = 'g'
 
                         # get adjustment from packet status
@@ -464,7 +466,7 @@ def plot_raw_data_from_socket(ax, ip_addr, port=9750):
                             #     x, y, z = x * mx + bx, y * my + by, z * mz + bz
                             xyz.append((x, y, z))
 
-                        # NOTE: This next bit of code shows we now know we're dealing with stream-based protocol!
+                        # NOTE: This next bit of code shows that we know we're dealing with stream-based protocol!
 
                         # keep remainder bytes & prepend'em to balance of samples we'll get for TshesAccelPacket struct
                         more_data = data[stop:]
@@ -508,12 +510,13 @@ def plot_raw_data_from_socket(ax, ip_addr, port=9750):
                         # get index for desired axis to be plotted
                         idx = axis_str2idx(ax)
 
-                        t_values = np.array([base_time + datetime.timedelta(seconds=i) for i in range(len(xyz))])
+                        # dispense with most recent values
+                        base_time = datetime.datetime.utcfromtimestamp(timestamp)
+                        t_values = np.array([base_time + datetime.timedelta(seconds=i/fs) for i in range(len(xyz))])
+                        # print(t_values[0], t_values[-1], len(xyz))
                         y_values = np.array([i[idx] for i in xyz])
-                        ma = np.ma.array(y_values, mask=is_outlier(y_values))
-
-                        display.add(t_values, ma)
-                        base_time = t_values[-1] + datetime.timedelta(seconds=delta_sec)
+                        display.add(t_values, y_values)
+                        # base_time = t_values[-1] + datetime.timedelta(seconds=delta_sec)
                         plt.pause(sleep_sec)
 
                 else:
@@ -556,13 +559,11 @@ def main():
     """some other testing may be appropriate here too, but try this for now"""
 
     HOST = TSHES13_IPADDR  # string with es13's ip address
-    #HOST = '192.112.237.68'
     PORT = 9750  # port used by tsh to transmit accel. data
-    #eric_example(HOST, PORT)
     # raw_data_from_socket(HOST, PORT)
-    plot_raw_data_from_socket('x', HOST, PORT)
-
-    sys.exit(0)
+    fs, fc = 250.0, 10.0
+    plot_raw_data_from_socket(fs, fc, 'y', HOST, PORT)
+    sys.exit(-2)
 
     # hit a simple echo server running on my pihole
     HOST = STAN_IPADDR  # string with rpi server's ip address
