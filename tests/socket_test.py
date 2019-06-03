@@ -387,7 +387,7 @@ def plot_raw_data_from_socket(fs, fc, ax, ip_addr, port=9750, norder=4, has_nan=
                         # get gain and input from packet status
                         gain_bits = packet_status & 0x001f
                         if gain_bits == 0:
-                            gain, inp = 1.0, 'Ground'  # _input_ is not used as far as I can tell
+                            gain, inp = 1.0, 'Ground'  # (inp)ut is not used, is it?
                         elif gain_bits == 1:
                             gain, inp = 2.5, 'Ground'
                         elif gain_bits == 2:
