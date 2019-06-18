@@ -1,66 +1,98 @@
 #!/usr/bin/env python
 
-from math import cos, radians
+import operator
 import numpy as np
 from collections import deque
 
 
 class Point(object):
 
-  def __init__(self, x, y):
-    self.x, self.y = x, y
+    def __init__(self, angle, counts):
+        self.angle, self.counts = angle, counts
 
-  def __str__(self):
-    return "{}, {}".format(self.x, self.y)
+    def __str__(self):
+        return "angle:{}, counts:{}".format(self.angle, self.counts)
 
-  def __neg__(self):
-    return Point(-self.x, -self.y)
+    def __neg__(self):
+        return Point(-self.angle, -self.counts)
 
-  def __add__(self, point):
-    return Point(self.x+point.x, self.y+point.y)
+    def __add__(self, point):
+        return Point(self.angle + point.x, self.counts + point.y)
 
-  def __sub__(self, point):
-    return self + -point  # add negative value is what we need here
+    def __sub__(self, point):
+        return self + -point  # add negative value is what we need here
+
+
+def dummy_get_counts(adeg):
+    from math import cos, radians
+    return cos(radians(adeg))
 
 
 def get_counts(adeg):
-    # move to angle, adeg, wait for steady state, then return counts value
-    return cos(radians(adeg))
+    # move to specified angle, adeg, wait for steady state settling, then return counts value
+    return dummy_get_counts(adeg)
 
 
 class GoldenSection(object):
 
     golden_ratio = (1 + np.sqrt(5)) / 2
 
-    def __init__(self, a, b):
-        self.a = a
-        self.b = b
-        self.c = b - (b - a) / self.golden_ratio
-        self.d = a + (b - a) / self.golden_ratio
-        self.gsection = deque(maxlen=4)  # once we truly initialize, we always want exactly len = 4
+    def __init__(self, a, b, max=True):
+        self._a = a
+        self._b = b
+        self._max = max  # True to find _max, False to find min
+        self._c = b - (b - a) / self.golden_ratio
+        self._d = a + (b - a) / self.golden_ratio
+        self._gsection = deque(maxlen=4)  # after we truly initialize _gsection, we always want exactly 4 tuples
+
+    def four_moves_section_init(self):
+        # we defer this initialization for _gsection because call to get_counts will MOVE THE RIG!
+        self._gsection.append((self._a, get_counts(self._a)))
+        self._gsection.append((self._c, get_counts(self._c)))
+        self._gsection.append((self._d, get_counts(self._d)))
+        self._gsection.append((self._b, get_counts(self._b)))
 
     def __str__(self):
-        return "a:{:.4f}, c:{:.4f}, d:{:.4f}, b:{:.4f}".format(self.a, self.c, self.d, self.b)
+        s = 'GSS(max)' if self._max else 'GSS(min)'
+        # 3 digits after decimal pt for angle; 9 for cosine (dummy) value since not yet working with counts
+        for tup in zip(['a', 'b', 'c', 'd'], self._gsection):
+            s += '  ' + str(tup[0]) + ': '
+            s += '{:8.3f}, {:.9f}'.format(*tup[1])
+        return s
 
-    def init_section(self):
-        # we separate this init for section because get_counts will MOVE THE RIG!
-        self.gsection.append((self.a, get_counts(self.a)))
-        self.gsection.append((self.c, get_counts(self.c)))
-        self.gsection.append((self.d, get_counts(self.d)))
-        self.gsection.append((self.b, get_counts(self.b)))
+    def update_section(self):
+        if self._max:
+            op = operator.ge  # comparison operator to find max
+        else:
+            op = operator.lt  # comparison operator to find min
+        fc = self._gsection[1][1]
+        fd = self._gsection[2][1]
+        if op(fc, fd):
+            # shift d2b & c2d
+            # initially                            # a c d b
+            self._gsection.rotate()                # b a c d
+            self._gsection[0] = self._gsection[1]  # a a c d
+            # now recompute 2nd element
+            b = self._gsection[-1][0]
+            a = self._gsection[0][0]
+            c = b - (b - a) / self.golden_ratio
+            self._gsection[1] = (c, get_counts(c))
+        else:
+            # shift c2a & d2c
+            # initially                              # a c d b
+            self._gsection.rotate(-1)                # c d b a
+            self._gsection[-1] = self._gsection[-2]  # c d b b
+            # now recompute 3rd element
+            b = self._gsection[-1][0]
+            a = self._gsection[0][0]
+            d = a + (b - a) / self.golden_ratio
+            self._gsection[2] = (d, get_counts(d))
 
 
-
-
-# p1 = Point(1, 1)
-# p2 = Point(1, 2)
-# print(p1)
-# print(p2)
-# print(p1+p2)
-# print(-p2)
-# print(p1-p2)
-
-gs = GoldenSection(145, 200)
-gs.init_section()  # section
+gs = GoldenSection(150, 210, max=False)
+# gs = GoldenSection(-30, 30, max=True)
+gs.four_moves_section_init()  # section
 print(gs)
-print(gs.gsection)
+for _ in range(15):
+    gs.update_section()
+    print(gs)
