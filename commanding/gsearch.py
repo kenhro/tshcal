@@ -33,7 +33,7 @@ def get_counts(adeg):
     return dummy_get_counts(adeg)
 
 
-class GoldenSection(object):
+class GoldenSectionSearch(object):
     """
     A class used for golden section search to find min/max.
 
@@ -93,25 +93,28 @@ class GoldenSection(object):
         fc = self._gsection[1][1]
         fd = self._gsection[2][1]
         if op(fc, fd):
-            # shift d2b & c2d
-            # initially, the interval section is...# a c d b
-            self._gsection.rotate()                # b a c d
-            self._gsection[0] = self._gsection[1]  # a a c d
+
+            # shift d2b & c2d, keep a, new c        # a c d b << initially
+            self._gsection.rotate()                 # b a c d << d2b & c2d
+            self._gsection[0] = self._gsection[1]   # a a c d << keep a
+
             # now recompute 2nd element
             b = self._gsection[-1][0]
             a = self._gsection[0][0]
             c = b - (b - a) / self.golden_ratio
-            self._gsection[1] = (c, get_counts(c))
+            self._gsection[1] = (c, get_counts(c))  # a N c d << N is the only new pt
+
         else:
-            # shift c2a & d2c
-            # initially, the interval section is.....# a c d b
-            self._gsection.rotate(-1)                # c d b a
-            self._gsection[-1] = self._gsection[-2]  # c d b b
+
+            # shift c2a & d2c, keep b, new d         # a c d b << initially
+            self._gsection.rotate(-1)                # c d b a << c2a & d2c
+            self._gsection[-1] = self._gsection[-2]  # c d b b << keep b
+
             # now recompute 3rd element
             b = self._gsection[-1][0]
             a = self._gsection[0][0]
             d = a + (b - a) / self.golden_ratio
-            self._gsection[2] = (d, get_counts(d))
+            self._gsection[2] = (d, get_counts(d))   # c d N b << N is the only new pt
 
         self.width = (b - a)
         self.mean = np.mean([a, b])
@@ -127,16 +130,16 @@ class GoldenSection(object):
         """
         for i in range(max_iters):
             self.update_section()
-            print(self)  # TODO -- maybe a verbosity input to suppress stdout?  Regardless, we should be logging!
+            print('{}  i:{:3d}'.format(self, i + 1))  # TODO -- maybe a verbosity input to suppress stdout? Regardless, we should be logging!
             if self.width < min_width:
                 break
 
 
 def demo():
-    # gs = GoldenSection(-30, 30, max=True)
-    gs = GoldenSection(1.50, 210, max=False)
+    # gs = GoldenSectionSearch(-30, 30, max=True)
+    gs = GoldenSectionSearch(150, 210, max=False)
     gs.four_moves_section_init()  # deferred initialization
-    print(gs)
+    print('{}  i:{:3d}'.format(gs, 0))
     gs.auto_run()
 
 
