@@ -36,23 +36,9 @@ def get_counts(adeg):
 class GoldenSection(object):
     """
     A class used for golden section search to find min/max.
+
     see https://en.wikipedia.org/wiki/Golden-section_search
 
-    Attributes
-    ----------
-    a : float
-        The smallest x-value (smallest angle) in search interval.
-    b : float
-        The largest x-value (largest angle) in search interval.
-    max: bool, optional
-        A flag, True to find max, or False to find min (default is True to find max).
-
-    Methods
-    -------
-    four_moves_section_init()
-        Deferred initialization of 4-tuple: (angle, counts) for a, c, d, b.
-    update_section()
-        Decide how to re-partition interval/section for next iteration in search.
     """
 
     golden_ratio = (1 + np.sqrt(5)) / 2
@@ -67,9 +53,11 @@ class GoldenSection(object):
         """
         self._a = a
         self._b = b
+        self.width = b - a
+        self.mean = np.mean([a, b])
         self._max = max  # True to find _max, False to find min
-        self._c = b - (b - a) / self.golden_ratio
-        self._d = a + (b - a) / self.golden_ratio
+        self._c = b - self.width / self.golden_ratio
+        self._d = a + self.width / self.golden_ratio
         self._gsection = deque(maxlen=4)  # after we truly initialize _gsection, we always want exactly 4 tuples
 
     def four_moves_section_init(self):
@@ -89,11 +77,13 @@ class GoldenSection(object):
         for tup in zip(['a', 'b', 'c', 'd'], self._gsection):
             s += '  ' + str(tup[0]) + ': '
             s += '{:8.3f}, {:.9f}'.format(*tup[1])
+        s += '  w:{:6.2f}'.format(self.width)  # width of overall interval in degrees
+        s += '  m:{:6.2f}'.format(self.mean)   # midpoint of overall interval in degrees
         return s
 
     def update_section(self):
         """
-        Refine interval based on whether searching for min or max and middle-two counts.
+        Refine interval based on middle-two counts & whether searching for min or max.
         :return: None
         """
         if self._max:
@@ -123,11 +113,32 @@ class GoldenSection(object):
             d = a + (b - a) / self.golden_ratio
             self._gsection[2] = (d, get_counts(d))
 
+        self.width = (b - a)
+        self.mean = np.mean([a, b])
 
-gs = GoldenSection(150, 210, max=False)
-# gs = GoldenSection(-30, 30, max=True)
-gs.four_moves_section_init()  # section
-print(gs)
-for _ in range(15):
-    gs.update_section()
+    def auto_run(self, min_width=0.1, max_iters=25):
+        """
+        Automatically run with calls to update_section, but stop when width < min_width or iterations > max_iters,
+        whichever comes first.
+
+        :param min_width: Float minimum value below which the auto_run method stops (default = 0.1 degrees).
+        :param max_iters: Integer maximum number of iterations above which auto_run method stops (default = 25).
+        :return: None
+        """
+        for i in range(max_iters):
+            self.update_section()
+            print(self)  # TODO -- maybe a verbosity input to suppress stdout?  Regardless, we should be logging!
+            if self.width < min_width:
+                break
+
+
+def demo():
+    gs = GoldenSection(150, 210, max=False)
+    # gs = GoldenSection(-30, 30, max=True)
+    gs.four_moves_section_init()  # deferred initialization
     print(gs)
+    gs.auto_run()
+
+
+if __name__ == '__main__':
+    demo()
