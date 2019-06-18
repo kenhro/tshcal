@@ -94,7 +94,7 @@ class GoldenSection(object):
         fd = self._gsection[2][1]
         if op(fc, fd):
             # shift d2b & c2d
-            # initially                            # a c d b
+            # initially, the interval section is...# a c d b
             self._gsection.rotate()                # b a c d
             self._gsection[0] = self._gsection[1]  # a a c d
             # now recompute 2nd element
@@ -104,7 +104,7 @@ class GoldenSection(object):
             self._gsection[1] = (c, get_counts(c))
         else:
             # shift c2a & d2c
-            # initially                              # a c d b
+            # initially, the interval section is.....# a c d b
             self._gsection.rotate(-1)                # c d b a
             self._gsection[-1] = self._gsection[-2]  # c d b b
             # now recompute 3rd element
