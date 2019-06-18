@@ -74,9 +74,9 @@ class GoldenSection(object):
     def __str__(self):
         s = 'GSS(max)' if self._max else 'GSS(min)'
         # 3 digits after decimal pt for angle; 9 for cosine (dummy) value since not yet working with counts
-        for tup in zip(['a', 'b', 'c', 'd'], self._gsection):
+        for tup in zip(['a', 'c', 'd', 'b'], self._gsection):
             s += '  ' + str(tup[0]) + ': '
-            s += '{:8.3f}, {:.9f}'.format(*tup[1])
+            s += '{:8.3f}, {:12.9f}'.format(*tup[1])
         s += '  w:{:6.2f}'.format(self.width)  # width of overall interval in degrees
         s += '  m:{:6.2f}'.format(self.mean)   # midpoint of overall interval in degrees
         return s
@@ -133,8 +133,8 @@ class GoldenSection(object):
 
 
 def demo():
-    gs = GoldenSection(150, 210, max=False)
     # gs = GoldenSection(-30, 30, max=True)
+    gs = GoldenSection(1.50, 210, max=False)
     gs.four_moves_section_init()  # deferred initialization
     print(gs)
     gs.auto_run()
