@@ -34,10 +34,37 @@ def get_counts(adeg):
 
 
 class GoldenSection(object):
+    """
+    A class used for golden section search to find min/max.
+    see https://en.wikipedia.org/wiki/Golden-section_search
+
+    Attributes
+    ----------
+    a : float
+        The smallest x-value (smallest angle) in search interval.
+    b : float
+        The largest x-value (largest angle) in search interval.
+    max: bool, optional
+        A flag, True to find max, or False to find min (default is True to find max).
+
+    Methods
+    -------
+    four_moves_section_init()
+        Deferred initialization of 4-tuple: (angle, counts) for a, c, d, b.
+    update_section()
+        Decide how to re-partition interval/section for next iteration in search.
+    """
 
     golden_ratio = (1 + np.sqrt(5)) / 2
 
     def __init__(self, a, b, max=True):
+        """
+        Parameters
+        ----------
+        :param a: Initial float for smallest angle in interval being searched.
+        :param b: Initial float for largest angle in interval being searched.
+        :param max: Boolean True to find max; otherwise, find min.
+        """
         self._a = a
         self._b = b
         self._max = max  # True to find _max, False to find min
@@ -46,6 +73,10 @@ class GoldenSection(object):
         self._gsection = deque(maxlen=4)  # after we truly initialize _gsection, we always want exactly 4 tuples
 
     def four_moves_section_init(self):
+        """
+        For each of 4 angle values in interval, get corresponding counts.
+        :return: None
+        """
         # we defer this initialization for _gsection because call to get_counts will MOVE THE RIG!
         self._gsection.append((self._a, get_counts(self._a)))
         self._gsection.append((self._c, get_counts(self._c)))
@@ -61,6 +92,10 @@ class GoldenSection(object):
         return s
 
     def update_section(self):
+        """
+        Refine interval based on whether searching for min or max and middle-two counts.
+        :return: None
+        """
         if self._max:
             op = operator.ge  # comparison operator to find max
         else:
