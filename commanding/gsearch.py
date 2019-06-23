@@ -150,7 +150,7 @@ class GoldenSectionSearch(object):
         """
         for i in range(max_iters):
             self.update_section()
-            # TODO -- maybe a verbosity input to suppress stdout? Regardless, we should be logging!
+            # TODO -- maybe a verbosity input to suppress stdout? Regardless, we should be logging
             print('{}  i:{:3d}'.format(self, i + 1))
             if self.width < min_width:
                 break

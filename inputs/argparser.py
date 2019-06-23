@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """This module utilizes argparse from the standard library to define what arguments are required and handles those with
 defaults and logic to help detect avoid invalid arguments."""
@@ -127,10 +127,10 @@ def parse_inputs():
     logger.info('-' * 55)
     logger.info('parsing input arguments')
 
-    # parse
+    # parse arguments
     args = parser.parse_args()
 
-    # show args
+    # show arguments
     logger.info(str(args).replace('Namespace', 'inputs:'))
 
     # adjust log level based on verbosity input args
@@ -150,5 +150,4 @@ def parse_inputs():
 
 
 if __name__ == '__main__':
-
     args = parse_inputs()

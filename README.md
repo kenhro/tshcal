@@ -26,7 +26,11 @@ Other steps for something else, then a representative...
 example goes here
 ```
 
-## Running the tests
+## Logging
+We aim to incorporate verbose logging for traceability after a session, and perhaps for "official" documentation too.
+To implement Python logging in multiple modules, we follow the "Best practice..." suggestion by Vinay Sajip at this link: https://stackoverflow.com/questions/15727420/using-python-logging-in-multiple-modules
+
+## Running Tests
 
 Explain how to run the automated tests for this system
 
