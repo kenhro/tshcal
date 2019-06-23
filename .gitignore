@@ -113,3 +113,4 @@ secret.py
 .idea/
 
 docs/ESP301-User-s-Manual.pdf
+.DS_Store
