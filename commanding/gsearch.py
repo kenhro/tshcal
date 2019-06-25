@@ -41,7 +41,7 @@ class GoldenSectionSearch(object):
 
     golden_ratio = (1 + np.sqrt(5)) / 2
 
-    def __init__(self, a, b, ax, max=True):
+    def __init__(self, a, b, ax, max=True, plot=True):
         """
         Parameters
         ----------
@@ -49,6 +49,7 @@ class GoldenSectionSearch(object):
         :param b: Initial float value for largest angle in interval being searched.
         :param ax: String for which rig axis is being controlled and used to search ('yaw', 'pitch' or 'roll')
         :param max: Boolean True to find max; otherwise, find min.
+        :param plot: Boolean True to plot results along the way.
         """
         self._a = a
         self._b = b
@@ -56,6 +57,8 @@ class GoldenSectionSearch(object):
         self.width = b - a
         self.mean = np.mean([a, b])
         self._max = max  # True to find max, False to find min
+        self.plot = plot
+        self._buffer = None
         self._c = b - self.width / self.golden_ratio
         self._d = a + self.width / self.golden_ratio
         self._ginterval = deque(maxlen=4)
@@ -78,11 +81,18 @@ class GoldenSectionSearch(object):
 
         :return: None
         """
-        # we defer this initialization for _gsection because call to get_counts will MOVE THE RIG!
+        # we defer this initialization for interval because calls here will MOVE THE RIG!
+
+        # create first 4 pts for interval
         self._ginterval.append((self._a, move_rig_get_counts(self.ax, self._a)))
         self._ginterval.append((self._c, move_rig_get_counts(self.ax, self._c)))
         self._ginterval.append((self._d, move_rig_get_counts(self.ax, self._d)))
         self._ginterval.append((self._b, move_rig_get_counts(self.ax, self._b)))
+
+        # plot (maybe)
+        if self.plot:
+            self._buffer = deque(self.get_interval(), maxlen=90)
+            # print(self._buffer)
 
     def __str__(self):
         s = 'GSS(max)' if self._max else 'GSS(min)'
@@ -94,7 +104,10 @@ class GoldenSectionSearch(object):
         s += '  m:{:6.2f}'.format(self.mean)   # midpoint of overall interval in degrees
         return s
 
-    def update_section(self):
+    def get_interval(self):
+        return list(self._ginterval)
+
+    def update_interval(self):
         """
         Refine interval based on middle-two counts & whether searching for min or max.
         :return: None
@@ -121,7 +134,8 @@ class GoldenSectionSearch(object):
             b = self._ginterval[-1][0]
             a = self._ginterval[0][0]
             c = b - (b - a) / self.golden_ratio
-            self._ginterval[1] = (c, move_rig_get_counts(self.ax, c))  # a N c d << N is the only new pt
+            new_point = (c, move_rig_get_counts(self.ax, c))
+            self._ginterval[1] = new_point                          # a N c d << N is the only new pt
 
         else:
 
@@ -133,11 +147,17 @@ class GoldenSectionSearch(object):
             b = self._ginterval[-1][0]
             a = self._ginterval[0][0]
             d = a + (b - a) / self.golden_ratio
-            self._ginterval[2] = (d, move_rig_get_counts(self.ax, d))  # c d N b << N is the only new pt
+            new_point = (d, move_rig_get_counts(self.ax, d))
+            self._ginterval[2] = new_point                          # c d N b << N is the only new pt
 
         # recompute width and mean value
         self.width = (b - a)
         self.mean = np.mean([a, b])
+
+        # update plot buffer (if needed)
+        if self.plot:
+            self._buffer.append(new_point)
+            print(len(self._buffer))
 
     def auto_run(self, min_width=0.1, max_iters=25):
         """
@@ -149,20 +169,20 @@ class GoldenSectionSearch(object):
         :return: None
         """
         for i in range(max_iters):
-            self.update_section()
-            # TODO -- maybe a verbosity input to suppress stdout? Regardless, we should be logging
+            self.update_interval()
+            # TODO -- maybe a verbosity input to suppress stdout? Regardless, we should be logging!
             print('{}  i:{:3d}'.format(self, i + 1))
             if self.width < min_width:
                 break
 
 
-def demo():
+def demo(plot=True):
     # gs = GoldenSectionSearch(-30, 30, max=True)
-    gs = GoldenSectionSearch(150, 210, 'pitch', max=False)
+    gs = GoldenSectionSearch(150, 210, 'pitch', max=False, plot=plot)
     gs.four_initial_moves()
     print('{}  i:{:3d}'.format(gs, 0))
     gs.auto_run()
 
 
 if __name__ == '__main__':
-    demo()
+    demo(plot=True)
