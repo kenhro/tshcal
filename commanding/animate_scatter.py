@@ -6,6 +6,19 @@ from matplotlib.animation import FuncAnimation
 from time import sleep
 from collections import deque
 
+# array = np.arange(18).reshape(9, 2)
+# print("Original array : \n", array)
+#
+# # Rolling array; Shifting one place
+# print("\nRolling with 1 shift : \n", np.roll(array, 1))
+#
+# # Rolling array; Shifting five places
+# print("\nRolling with 5 shift : \n", np.roll(array, 5))
+#
+# # Rolling array; Shifting five places with 0th axis
+# print("\nRolling with 5 shift with 0 axis : \n", np.roll(array, 2, axis=0))
+#
+# raise SystemExit
 
 ACDB = np.array([
     150.000, 172.918, 187.082, 210.000,
@@ -35,23 +48,7 @@ def angles():
         yield ACDB[i]
 
 
-deck = deque(maxlen=12)
-x = angles()
-for _ in range(len(ACDB)+2):
-    try:
-        a = next(x)
-        print(a)
-        deck.append(a)
-    except StopIteration:
-        print('ok')
-
-print(deck)
-
-# for i in generator:
-#     deck.append(i)
-#     print(i, np.cos(np.radians(i)))
-raise SystemExit
-
+a = angles()
 
 # TODO refactor to move the following from all caps global vars to config/settings (if appropriate)
 SF_COUNTS = 10_000  # scale factor for counts
@@ -76,41 +73,69 @@ n_pts = NUM_PTS
 scatter_pts = np.zeros(n_pts, dtype=[('position', float, 2),
                                      ('color',    float, 4)])
 
-# Create x-, y-values using cosine function
-x = 360 * np.random.random_sample(size=NUM_PTS)
-y = np.cos(np.radians(x))
-
-# Initialize scatter points
-scatter_pts['position'] = np.vstack((x, y)).T
+# angle = next(a)
+# scatter_pts['position'][0, 0] = angle
+# scatter_pts['position'][0, 1] = np.cos(np.radians(angle))
+# scatter_pts['color'][0] = (0, 0, 0, 1)
+#
+# print(scatter_pts)
+#
+# ##############################################
+# scatter_pts = np.roll(scatter_pts, 1, axis=0)
+#
+# # Make all colors more transparent as time progresses
+# scatter_pts['color'][:, 3] -= 1.0 / len(scatter_pts)
+# scatter_pts['color'][:, 3] = np.clip(scatter_pts['color'][:, 3], 0, 1)
+#
+# angle = next(a)
+# scatter_pts['position'][0, 0] = angle
+# scatter_pts['position'][0, 1] = np.cos(np.radians(angle))
+# scatter_pts['color'][0] = (0, 0, 0, 1)
+# ##############################################
+# print(scatter_pts)
+#
+# scatter_pts = np.roll(scatter_pts, 1, axis=0)
+#
+# # Make all colors more transparent as time progresses
+# scatter_pts['color'][:, 3] -= 1.0 / len(scatter_pts)
+# scatter_pts['color'][:, 3] = np.clip(scatter_pts['color'][:, 3], 0, 1)
+#
+# angle = next(a)
+# scatter_pts['position'][0, 0] = angle
+# scatter_pts['position'][0, 1] = np.cos(np.radians(angle))
+# scatter_pts['color'][0] = (0, 0, 0, 1)
+#
+# print(scatter_pts)
+#
+# raise SystemExit
 
 # Construct scatter plot which updates via animation as rig moves
-# pts = ax.scatter(scatter_pts['position'][:, 0], scatter_pts['position'][:, 1],
-#                  s=75, linewidth=0.5, edgecolors='none', facecolors=scatter_pts['color'])
 pts = ax.scatter(scatter_pts['position'][:, 0], scatter_pts['position'][:, 1],
                  s=75, linewidth=0.5, edgecolors='none', facecolors=scatter_pts['color'])
 
 
-def update(frame_number):
-    # Get an index which we can use to re-spawn the oldest scatter point.
-    current_index = frame_number % n_pts
+def update(frame_number, scatter_pts):
+
+    scatter_pts = np.roll(scatter_pts, 1, axis=0)
 
     # Make all colors more transparent as time progresses
     scatter_pts['color'][:, 3] -= 1.0 / len(scatter_pts)
     scatter_pts['color'][:, 3] = np.clip(scatter_pts['color'][:, 3], 0, 1)
 
-    # Pick a new position for oldest scatter point, setting its position and color
-    x_new = 360 * np.random.random_sample()
-    y_new = np.cos(np.radians(x_new))
-    scatter_pts['position'][current_index] = [x_new, y_new]
-    scatter_pts['color'][current_index] = (0, 0, 0, 1)
+    angle = next(a)
+    scatter_pts['position'][0, 0] = angle
+    scatter_pts['position'][0, 1] = np.cos(np.radians(angle))
+    scatter_pts['color'][0] = (0, 0, 0, 1)
+
+    print(scatter_pts)
 
     # Update the scatter pts collection, with the new colors and positions
     pts.set_facecolors(scatter_pts['color'])
     pts.set_offsets(scatter_pts['position'])
 
-    sleep(0.25)
+    sleep(0.5)
 
 
 # Construct the animation, using the update function as the animation director.
-animation = FuncAnimation(fig, update, interval=50)
+animation = FuncAnimation(fig, update, fargs=(scatter_pts, ), interval=50)
 plt.show()
