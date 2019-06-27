@@ -51,7 +51,7 @@ class GoalProgression(object):
 
         self.search_pts = np.roll(self.search_pts, 1, axis=0)
 
-        # Make all colors more transparent as time progresses
+        # make colors more transparent with time
         self.search_pts['color'][:, 3] -= 1.0 / len(self.search_pts)
         self.search_pts['color'][:, 3] = np.clip(self.search_pts['color'][:, 3], 0, 1)
 

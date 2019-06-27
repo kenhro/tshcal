@@ -41,39 +41,39 @@ class GoldenSectionSearch(object):
 
     golden_ratio = (1 + np.sqrt(5)) / 2
 
-    def __init__(self, a, b, ax, max=True, plot=True):
+    def __init__(self, a, b, rig_ax, max=True, plot=True):
         """
         Parameters
         ----------
         :param a: Initial float value for smallest angle in interval being searched.
         :param b: Initial float value for largest angle in interval being searched.
-        :param ax: String for which rig axis is being controlled and used to search ('yaw', 'pitch' or 'roll')
+        :param rig_ax: String for which rig axis is being controlled and used to search ('yaw', 'pitch' or 'roll')
         :param max: Boolean True to find max; otherwise, find min.
-        :param plot: Boolean True to plot results along the way.
+        :param plot: Boolean True to plot progress toward max (or min).
         """
         self._a = a
         self._b = b
-        self.ax = self._set_ax(ax)
+        self.rig_ax = self._set_ax(rig_ax)
         self.width = b - a
         self.mean = np.mean([a, b])
         self._max = max  # True to find max, False to find min
-        self.plot = plot
+        self.plot = plot  # True to plot progress; otherwise, False
         self._buffer = None
         self._c = b - self.width / self.golden_ratio
         self._d = a + self.width / self.golden_ratio
         self._ginterval = deque(maxlen=4)
 
-    def _set_ax(self, ax):
+    def _set_ax(self, rax):
         """
         Validate and set attribute for rig axis.
 
-        :param ax: String for rig axis ('roll', 'pitch' or 'yaw')
+        :param rax: String for rig axis ('roll', 'pitch' or 'yaw')
         :return: String (that was validated)
         """
-        if ax in ['roll', 'pitch', 'yaw']:
-            return ax
+        if rax in ['roll', 'pitch', 'yaw']:
+            return rax
         else:
-            raise ValueError("invalid input ax ('%s') must be: 'roll', 'pitch' or 'yaw'" % ax)
+            raise ValueError("invalid input ax ('%s') must be: 'roll', 'pitch' or 'yaw'" % rax)
 
     def four_initial_moves(self):
         """
@@ -84,10 +84,10 @@ class GoldenSectionSearch(object):
         # we defer this initialization for interval because calls here will MOVE THE RIG!
 
         # create first 4 pts for interval
-        self._ginterval.append((self._a, move_rig_get_counts(self.ax, self._a)))
-        self._ginterval.append((self._c, move_rig_get_counts(self.ax, self._c)))
-        self._ginterval.append((self._d, move_rig_get_counts(self.ax, self._d)))
-        self._ginterval.append((self._b, move_rig_get_counts(self.ax, self._b)))
+        self._ginterval.append((self._a, move_rig_get_counts(self.rig_ax, self._a)))
+        self._ginterval.append((self._c, move_rig_get_counts(self.rig_ax, self._c)))
+        self._ginterval.append((self._d, move_rig_get_counts(self.rig_ax, self._d)))
+        self._ginterval.append((self._b, move_rig_get_counts(self.rig_ax, self._b)))
 
         # plot (maybe)
         if self.plot:
@@ -134,7 +134,7 @@ class GoldenSectionSearch(object):
             b = self._ginterval[-1][0]
             a = self._ginterval[0][0]
             c = b - (b - a) / self.golden_ratio
-            new_point = (c, move_rig_get_counts(self.ax, c))
+            new_point = (c, move_rig_get_counts(self.rig_ax, c))
             self._ginterval[1] = new_point                          # a N c d << N is the only new pt
 
         else:
@@ -147,7 +147,7 @@ class GoldenSectionSearch(object):
             b = self._ginterval[-1][0]
             a = self._ginterval[0][0]
             d = a + (b - a) / self.golden_ratio
-            new_point = (d, move_rig_get_counts(self.ax, d))
+            new_point = (d, move_rig_get_counts(self.rig_ax, d))
             self._ginterval[2] = new_point                          # c d N b << N is the only new pt
 
         # recompute width and mean value
@@ -157,7 +157,7 @@ class GoldenSectionSearch(object):
         # update plot buffer (if needed)
         if self.plot:
             self._buffer.append(new_point)
-            print(len(self._buffer))
+            # print(len(self._buffer))
 
     def auto_run(self, min_width=0.1, max_iters=25):
         """
@@ -176,13 +176,16 @@ class GoldenSectionSearch(object):
                 break
 
 
-def demo(plot=True):
-    # gs = GoldenSectionSearch(-30, 30, max=True)
-    gs = GoldenSectionSearch(150, 210, 'pitch', max=False, plot=plot)
+def demo():
+    amin, amax = 150, 210
+    rig_ax = 'pitch'
+    is_max = False
+    is_plot = True
+    gs = GoldenSectionSearch(amin, amax, rig_ax, max=is_max, plot=is_plot)
     gs.four_initial_moves()
     print('{}  i:{:3d}'.format(gs, 0))
     gs.auto_run()
 
 
 if __name__ == '__main__':
-    demo(plot=True)
+    demo()
