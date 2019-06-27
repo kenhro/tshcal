@@ -6,7 +6,9 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
 from commanding.gsearch import move_rig_get_counts
+
 # FIXME next import line is dummy to show an example
+# TODO figure out where these values should be coming from (or how to derive them)
 from commanding.plot_progress_helper import SF_COUNTS, NUM_PTS, get_next_angle
 
 
@@ -91,7 +93,7 @@ class GoalProgression(object):
         plt.show()
 
 
-def demo_progress_plot():
+if __name__ == '__main__':
 
     rig_ax = 'yaw'  # FIXME how/where do we establish rig axis we are using?
 
@@ -102,7 +104,4 @@ def demo_progress_plot():
     # start progress plot animation
     gp.animate()
 
-
-if __name__ == '__main__':
-    demo_progress_plot()
-    print('bye now')
+    print('bye')
