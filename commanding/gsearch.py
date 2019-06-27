@@ -8,7 +8,7 @@ from collections import deque
 def dummy_get_counts(a):
     """This is a convenient/dummy function for mimicking cosine profile around min/max values."""
     from math import cos, radians
-    return cos(radians(a))
+    return 4_123_456 * cos(radians(a))
 
 
 def move_rig_get_counts(ax, a):
