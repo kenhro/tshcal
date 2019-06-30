@@ -1,21 +1,31 @@
 #!/usr/bin/env python3
 
 import numpy as np
-from time import sleep
+import datetime
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
 
-from commanding.gsearch import move_rig_get_counts
+from tshcal.commanding.gsearch import move_rig_get_counts
 
 # FIXME next import line is dummy to show an example
 # TODO figure out where these values should be coming from (or how to derive them)
-from commanding.plot_progress_helper import SF_COUNTS, NUM_PTS, get_next_angle
+from tshcal.commanding.plot_progress_helper import SF_COUNTS, NUM_PTS, get_next_angle
+
+
+class DataSource(object):
+
+    def __init__(self, rig_ax):
+        self.rig_ax = rig_ax
+
+    def next_pt(self):
+        angle = get_next_angle()
+        counts = move_rig_get_counts(self.rig_ax, angle)
+        return angle, counts
 
 
 class GoalProgression(object):
 
-    def __init__(self, rig_ax, num_pts=NUM_PTS):
-        self.rig_ax = rig_ax
+    def __init__(self, src, num_pts=NUM_PTS):
+        self.src = src
         self.num_pts = num_pts
         self.search_pts = None
         self.fig = None
@@ -44,10 +54,14 @@ class GoalProgression(object):
         self.scat = self.ax.scatter(self.search_pts['position'][:, 0], self.search_pts['position'][:, 1],
                                     s=75, linewidth=1.0, edgecolors=self.search_pts['color'], facecolors='none')
 
+        # show the progress plot
+        plt.ion()
+        plt.show()
+
     def __str__(self):
         return str(self.search_pts)
 
-    def step(self, frame_num):
+    def step(self):
 
         self.search_pts = np.roll(self.search_pts, 1, axis=0)
 
@@ -55,53 +69,51 @@ class GoalProgression(object):
         self.search_pts['color'][:, 3] -= 1.0 / len(self.search_pts)
         self.search_pts['color'][:, 3] = np.clip(self.search_pts['color'][:, 3], 0, 1)
 
-        angle = get_next_angle()
-        counts = move_rig_get_counts(self.rig_ax, angle)
+        angle, counts = self.src.next_pt()
+        # angle = get_next_angle()
+        # counts = move_rig_get_counts(self.src.rig_ax, angle)
 
         self.search_pts['position'][0, 0] = angle
         self.search_pts['position'][0, 1] = counts
         self.search_pts['color'][0] = (0, 0, 0, 1)
 
-        # if frame_num > 20:
-        #     print(self.search_pts)
+    def plot_step(self):
 
-    def plot_step(self, frame_num):
+        # update search_pts array with next (angle, counts)
+        self.step()
 
-        if frame_num == 0: return  # FIXME FuncAnimation quirk: it runs this callback twice for zero-th (first) frame
-
-        # update title with frame number
-        self.step(frame_num)
-        self.ax.set_title('Iteration: %d' % frame_num)
+        # update title with system time
+        self.ax.set_title('Time: %s' % datetime.datetime.now())
 
         # update scatter pts collection with new edgecolors (transparencies) & positions
         self.scat.set_edgecolors(self.search_pts['color'])
         self.scat.set_offsets(self.search_pts['position'])
 
-        # update xlim on 4th frame (we've gotten to initial golden section interval)
-        if frame_num == 4:
-            pb = self.search_pts['position'][0]
-            pa = self.search_pts['position'][3]
-            w = 4.0 * (pb[0] - pa[0]) / 3.0
-            self.ax.set_xlim(pa[0] - w / 3.0, pb[0] + w / 3.0)
-
         # print(frame_num, self)
-        sleep(0.15)
+        plt.draw()
 
-    def animate(self):
-        # show progress plot animation
-        ani = FuncAnimation(self.fig, self.plot_step)  # without LHS output, no updates!?
-        plt.show()
+    def run(self):
+        while True:
+            self.plot_step()
+            plt.pause(0.001)
+            ans = input("Type [enter] to step, or [x] exit: ")
+            if ans == 'x':
+                break
+        print('user pressed x, so exiting')
 
 
 if __name__ == '__main__':
 
-    rig_ax = 'yaw'  # FIXME how/where do we establish rig axis we are using?
+    rig_ax = 'pitch'  # FIXME how/where do we establish rig axis we are using?
+
+    # create data source object, which can get next point (angle, counts)
+    source = DataSource('yaw')
 
     # create object to plot our search progress
-    gp = GoalProgression(rig_ax, num_pts=NUM_PTS)
+    gp = GoalProgression(source, num_pts=NUM_PTS)
     gp.setup_plot()
 
     # start progress plot animation
-    gp.animate()
+    gp.run()
 
-    print('bye')
+    print('done')

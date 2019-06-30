@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import operator
 import numpy as np
@@ -62,6 +62,8 @@ class GoldenSectionSearch(object):
         self._c = b - self.width / self.golden_ratio
         self._d = a + self.width / self.golden_ratio
         self._ginterval = deque(maxlen=4)
+        self.current_angle = None
+        self.current_count = None
 
     def _set_ax(self, rax):
         """
@@ -74,6 +76,10 @@ class GoldenSectionSearch(object):
             return rax
         else:
             raise ValueError("invalid input ax ('%s') must be: 'roll', 'pitch' or 'yaw'" % rax)
+
+    def get_angle_counts(self):
+        self.current_count = move_rig_get_counts(self.current_angle)
+        return self.current_angle, self.current_count
 
     def four_initial_moves(self):
         """
