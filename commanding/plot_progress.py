@@ -1,31 +1,17 @@
 #!/usr/bin/env python3
 
-import numpy as np
 import datetime
+import numpy as np
 import matplotlib.pyplot as plt
 
-from tshcal.commanding.gsearch import move_rig_get_counts
-
-# FIXME next import line is dummy to show an example
 # TODO figure out where these values should be coming from (or how to derive them)
-from tshcal.commanding.plot_progress_helper import SF_COUNTS, NUM_PTS, get_next_angle
+from tshcal.commanding.plot_progress_helper import SF_COUNTS, NUM_PTS
 
 
-class DataSource(object):
+class GoalProgressPlot(object):
 
-    def __init__(self, rig_ax):
+    def __init__(self, rig_ax, num_pts=NUM_PTS):
         self.rig_ax = rig_ax
-
-    def next_pt(self):
-        angle = get_next_angle()
-        counts = move_rig_get_counts(self.rig_ax, angle)
-        return angle, counts
-
-
-class GoalProgression(object):
-
-    def __init__(self, src, num_pts=NUM_PTS):
-        self.src = src
         self.num_pts = num_pts
         self.search_pts = None
         self.fig = None
@@ -48,11 +34,13 @@ class GoalProgression(object):
         # adjust axes
         self.ax.axis([0, 1, 0, 1])
         self.ax.set_xlim(0, 360)  # TODO set xticks based on current rough home position and/or interval
-        self.ax.set_ylim(-4.2e6, 4.2e6)  # TODO set yticks how?  we don't really know good, fairly narrow bounds?
+        self.ax.set_ylim(-4.2e6, 4.2e6)  # TODO set yticks how?  how to know good, fairly narrow bounds?
 
         # construct scatter plot which updates via animation as the rig moves
         self.scat = self.ax.scatter(self.search_pts['position'][:, 0], self.search_pts['position'][:, 1],
                                     s=75, linewidth=1.0, edgecolors=self.search_pts['color'], facecolors='none')
+
+        self.ax.set_title('Rig Axis = %s, Time: %s' % (self.rig_ax, datetime.datetime.now()))
 
         # show the progress plot
         plt.ion()
@@ -61,7 +49,7 @@ class GoalProgression(object):
     def __str__(self):
         return str(self.search_pts)
 
-    def step(self):
+    def step(self, x, y):
 
         self.search_pts = np.roll(self.search_pts, 1, axis=0)
 
@@ -69,18 +57,14 @@ class GoalProgression(object):
         self.search_pts['color'][:, 3] -= 1.0 / len(self.search_pts)
         self.search_pts['color'][:, 3] = np.clip(self.search_pts['color'][:, 3], 0, 1)
 
-        angle, counts = self.src.next_pt()
-        # angle = get_next_angle()
-        # counts = move_rig_get_counts(self.src.rig_ax, angle)
-
-        self.search_pts['position'][0, 0] = angle
-        self.search_pts['position'][0, 1] = counts
+        self.search_pts['position'][0, 0] = x  # angle
+        self.search_pts['position'][0, 1] = y  # counts
         self.search_pts['color'][0] = (0, 0, 0, 1)
 
-    def plot_step(self):
+    def plot_step(self, x, y):
 
-        # update search_pts array with next (angle, counts)
-        self.step()
+        # update search_pts array with next (x=angle, y=counts)
+        self.step(x, y)
 
         # update title with system time
         self.ax.set_title('Time: %s' % datetime.datetime.now())
@@ -89,31 +73,13 @@ class GoalProgression(object):
         self.scat.set_edgecolors(self.search_pts['color'])
         self.scat.set_offsets(self.search_pts['position'])
 
-        # print(frame_num, self)
+        # update canvas
         plt.draw()
 
-    def run(self):
-        while True:
-            self.plot_step()
-            plt.pause(0.001)
-            ans = input("Type [enter] to step, or [x] exit: ")
-            if ans == 'x':
-                break
-        print('user pressed x, so exiting')
+    def plot_point(self, x, y):
+        self.plot_step(x, y)
+        plt.pause(0.001)
 
-
-if __name__ == '__main__':
-
-    rig_ax = 'pitch'  # FIXME how/where do we establish rig axis we are using?
-
-    # create data source object, which can get next point (angle, counts)
-    source = DataSource('yaw')
-
-    # create object to plot our search progress
-    gp = GoalProgression(source, num_pts=NUM_PTS)
-    gp.setup_plot()
-
-    # start progress plot animation
-    gp.run()
-
-    print('done')
+    def debug_plot_point(self, x, y):
+        # TODO add verbosity for logging
+        self.plot_point(x, y)

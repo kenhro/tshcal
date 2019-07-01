@@ -4,14 +4,20 @@ import operator
 import numpy as np
 from collections import deque
 
+from tshcal.commanding.plot_progress import GoalProgressPlot
 
-def dummy_get_counts(a):
+# next 2 imports (I think) only in dummy calls
+from time import sleep
+from math import cos, radians
+
+
+def dummy_move_to_get_counts(a):
     """This is a convenient/dummy function for mimicking cosine profile around min/max values."""
-    from math import cos, radians
+    sleep(0.5)  # this to fake what should be allowed settling time (maybe 60 seconds?)
     return 4_123_456 * cos(radians(a))
 
 
-def move_rig_get_counts(ax, a):
+def move_rig_get_counts(ax, a, plot_fun=None):
     """Move calibration rig axis to desired absolute angle (i.e. "move roll axis to 89.05 degrees").
 
     Parameters
@@ -20,15 +26,30 @@ def move_rig_get_counts(ax, a):
         The rig axis to be moved: 'yaw', 'pitch', or 'roll'.
     a: float
         The absolute angle (degrees) that we want to drive the given rig axis to.
+    plot_fun: plot function (method)
+        None for no plotting or...
+        an object method:
+         e.g. GoalProgressPlot's plot_point or debug_plot_point method
+              plot_point: just update plot with (angle, counts) -- no prompts
+              debug_plot_point: prompt user with angle BEFORE moving rig
 
     Returns
     -------
-    None
+    counts
 
     """
     # TODO replace dummy call with actual rig control code
-    # TODO see GoldenSectionSearch class' _set_ax method for validating rig axis string
-    return dummy_get_counts(a)
+    if plot_fun:
+        fun_name = plot_fun.__name__
+        if fun_name.lower().startswith('debug'):
+            ans = input("RIG AXIS = %s, ANGLE = %.3f deg...Type [enter] to step, or [x] exit: " % (ax, a))
+            if ans == 'x':
+                raise Exception('User aborted RIG AXIS = %s, ANGLE = %.3f' % (ax, a))
+        counts = dummy_move_to_get_counts(a)
+        plot_fun(a, counts)  # e.g. GoalProgressPlot.plot_point(x, y)
+        return counts
+    else:
+        return dummy_move_to_get_counts(a)
 
 
 class GoldenSectionSearch(object):
@@ -41,7 +62,7 @@ class GoldenSectionSearch(object):
 
     golden_ratio = (1 + np.sqrt(5)) / 2
 
-    def __init__(self, a, b, rig_ax, max=True, plot=True):
+    def __init__(self, a, b, rig_ax, max=True, plot=None):
         """
         Parameters
         ----------
@@ -49,7 +70,8 @@ class GoldenSectionSearch(object):
         :param b: Initial float value for largest angle in interval being searched.
         :param rig_ax: String for which rig axis is being controlled and used to search ('yaw', 'pitch' or 'roll')
         :param max: Boolean True to find max; otherwise, find min.
-        :param plot: Boolean True to plot progress toward max (or min).
+        :param plot: None for no plotting or an object with these methods:
+                     plot_point or debug_plot_point
         """
         self._a = a
         self._b = b
@@ -57,13 +79,12 @@ class GoldenSectionSearch(object):
         self.width = b - a
         self.mean = np.mean([a, b])
         self._max = max  # True to find max, False to find min
-        self.plot = plot  # True to plot progress; otherwise, False
+        self.plot = plot  # None for no plot; otherwise object with prescribed methods
         self._buffer = None
         self._c = b - self.width / self.golden_ratio
         self._d = a + self.width / self.golden_ratio
         self._ginterval = deque(maxlen=4)
         self.current_angle = None
-        self.current_count = None
 
     def _set_ax(self, rax):
         """
@@ -77,10 +98,6 @@ class GoldenSectionSearch(object):
         else:
             raise ValueError("invalid input ax ('%s') must be: 'roll', 'pitch' or 'yaw'" % rax)
 
-    def get_angle_counts(self):
-        self.current_count = move_rig_get_counts(self.current_angle)
-        return self.current_angle, self.current_count
-
     def four_initial_moves(self):
         """
         For each of 4 angle values in interval, get corresponding counts.
@@ -90,15 +107,10 @@ class GoldenSectionSearch(object):
         # we defer this initialization for interval because calls here will MOVE THE RIG!
 
         # create first 4 pts for interval
-        self._ginterval.append((self._a, move_rig_get_counts(self.rig_ax, self._a)))
-        self._ginterval.append((self._c, move_rig_get_counts(self.rig_ax, self._c)))
-        self._ginterval.append((self._d, move_rig_get_counts(self.rig_ax, self._d)))
-        self._ginterval.append((self._b, move_rig_get_counts(self.rig_ax, self._b)))
-
-        # plot (maybe)
-        if self.plot:
-            self._buffer = deque(self.get_interval(), maxlen=90)
-            # print(self._buffer)
+        self._ginterval.append((self._a, move_rig_get_counts(self.rig_ax, self._a, self.plot)))
+        self._ginterval.append((self._c, move_rig_get_counts(self.rig_ax, self._c, self.plot)))
+        self._ginterval.append((self._d, move_rig_get_counts(self.rig_ax, self._d, self.plot)))
+        self._ginterval.append((self._b, move_rig_get_counts(self.rig_ax, self._b, self.plot)))
 
     def __str__(self):
         s = 'GSS(max)' if self._max else 'GSS(min)'
@@ -140,7 +152,7 @@ class GoldenSectionSearch(object):
             b = self._ginterval[-1][0]
             a = self._ginterval[0][0]
             c = b - (b - a) / self.golden_ratio
-            new_point = (c, move_rig_get_counts(self.rig_ax, c))
+            new_point = (c, move_rig_get_counts(self.rig_ax, c, self.plot))
             self._ginterval[1] = new_point                          # a N c d << N is the only new pt
 
         else:
@@ -153,17 +165,12 @@ class GoldenSectionSearch(object):
             b = self._ginterval[-1][0]
             a = self._ginterval[0][0]
             d = a + (b - a) / self.golden_ratio
-            new_point = (d, move_rig_get_counts(self.rig_ax, d))
+            new_point = (d, move_rig_get_counts(self.rig_ax, d, self.plot))
             self._ginterval[2] = new_point                          # c d N b << N is the only new pt
 
         # recompute width and mean value
         self.width = (b - a)
         self.mean = np.mean([a, b])
-
-        # update plot buffer (if needed)
-        if self.plot:
-            self._buffer.append(new_point)
-            # print(len(self._buffer))
 
     def auto_run(self, min_width=0.1, max_iters=25):
         """
@@ -183,11 +190,33 @@ class GoldenSectionSearch(object):
 
 
 def demo():
-    amin, amax = 150, 210
-    rig_ax = 'pitch'
-    is_max = False
-    is_plot = True
-    gs = GoldenSectionSearch(amin, amax, rig_ax, max=is_max, plot=is_plot)
+
+    # get info (mostly from parsing command line args)
+    rig_ax = 'pitch'       # decided by which TSH axis working on (need 2 such rig_ax for each TSH axis)
+    amin, amax = 150, 210  # if TSH +X, then e.g. pitch range (similar for other rig_ax range)
+    is_max = False         # if TSH +X, then True (-X: False, +Y, True, etc.)
+    want_to_plot = True    # to be parsed from command line args
+    debug_plot = False     # to be parsed from command line args
+
+    # if we want to plot, then need an object to handle plotting our points
+    if want_to_plot:
+
+        # initialize and setup plot
+        gpp = GoalProgressPlot(rig_ax)
+        gpp.setup_plot()
+
+        # choose the method for plotting
+        if debug_plot:
+            plot_func = gpp.debug_plot_point
+        else:
+            plot_func = gpp.plot_point
+
+    else:
+
+        plot_func = None
+
+    # run search, which MOVES THE RIG (possibly plot results or prompting user along the way)
+    gs = GoldenSectionSearch(amin, amax, rig_ax, max=is_max, plot=plot_func)
     gs.four_initial_moves()
     print('{}  i:{:3d}'.format(gs, 0))
     gs.auto_run()
