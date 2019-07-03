@@ -10,9 +10,9 @@ import argparse
 from dateutil import parser as dparser
 import logging.config
 
-from defaults import DEFAULT_OUTDIR, ROOT_DIR
-from defaults import DEFAULT_SENSOR, DEFAULT_RATE, DEFAULT_GAIN
-from defaults import DEFAULT_START
+from tshcal.defaults import DEFAULT_OUTDIR, ROOT_DIR
+from tshcal.defaults import DEFAULT_SENSOR, DEFAULT_RATE, DEFAULT_GAIN
+from tshcal.defaults import DEFAULT_START
 
 
 def folder_str(f):

@@ -1,6 +1,6 @@
 import os
 import datetime
-from common.time_utils import ceil_dtm
+from tshcal.common.time_utils import ceil_dtm
 
 # TODO figure out what makes sense to have defaults for (or not)
 # TODO find & use most widely used [needed?] convention: es13, tshes-13, tsh-es13, other?
