@@ -135,6 +135,7 @@ def raw_data_from_socket(ip_addr, bytes_ctr, port=9750):
                         # number of samples
                         num_samples = struct.unpack('!i', data[76:80])[0]  # Network byte order
 
+                        # FIXME maybe a dict -- move this up/out to defaults or config or what?
                         # get rate and cutoff_freq from packet status
                         rate_bits = (packet_status & 0x0f00) >> 8
                         if rate_bits == 0:
@@ -159,6 +160,7 @@ def raw_data_from_socket(ip_addr, bytes_ctr, port=9750):
                             # FIXME how do we gracefully proceed with wrong rate info?
                             rate, cutoff_freq = 0.0, 0.0
 
+                        # FIXME maybe a dict -- move this up/out to defaults or config or what?
                         # get gain and input from packet status
                         gain_bits = packet_status & 0x001f
                         if gain_bits == 0:
@@ -357,6 +359,7 @@ def plot_raw_data_from_socket(fs, fc, ax, ip_addr, port=9750, norder=4, has_nan=
                         # number of samples
                         num_samples = struct.unpack('!i', data[76:80])[0]  # Network byte order
 
+                        # FIXME maybe a dict -- move this up/out to defaults or config or what?
                         # get rate and cutoff_freq from packet status
                         rate_bits = (packet_status & 0x0f00) >> 8
                         if rate_bits == 0:
@@ -384,6 +387,7 @@ def plot_raw_data_from_socket(fs, fc, ax, ip_addr, port=9750, norder=4, has_nan=
                         if rate != fs:
                             raise RuntimeError('sample rate does not match fs input')
 
+                        # FIXME maybe a dict -- move this up/out to defaults or config or what?
                         # get gain and input from packet status
                         gain_bits = packet_status & 0x001f
                         if gain_bits == 0:

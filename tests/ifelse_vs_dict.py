@@ -3,18 +3,18 @@
 """
 This is demo code to:
 
-(1) show 2 options for moving to rough home positions (dictionary is improvement as it takes basically hard-coded
-    position information and moves it up/out and more toward collecting all such info into common/config location)
+(1) Show 2 options for moving to rough home positions.  Note that dictionary is improvement as it moves hard-coded
+    position information out of low-level code and moves toward collecting all such info into common/config location.
 
-(2) show refactored code -- pull repeated patterns of code out to higher-level abstract version
+(2) Show refactored code -- pull repeated patterns of code out to higher-level, abstract version.
 """
 
-from tshcal.tests.fake_esp import FakeESP  # faking it to facilitate the demo here
-from tshcal.inputs import HOMES  # go see content of __init__.py file in tshcal's "inputs" directory...maybe our config?
+from tshcal.tests.fake_esp import FakeESP  # faking ESP object to facilitate the demo code here
+from tshcal.defaults import HOMES  # see content of defaults.py module in tshcal's root directory...maybe our config?
 
 
 #######################################################################################################################
-# Option 1 -- branch via dictionary
+# Option 1 -- branch via dictionary (better option for our use case)
 def go_to_rough_home(esp, pos):
     """
     return actual position after moving rig to approximate, rough home position
@@ -29,7 +29,7 @@ def go_to_rough_home(esp, pos):
 
 
 #######################################################################################################################
-# Option 2 (similar to Will's original code) -- this uses an if/else pattern
+# Option 2 -- branch via if/else
 def go_to_rough_home_via_ifelse(esp, pos):
     """
     return actual position after moving rig to approximate, rough home position (via if/else pattern)
@@ -61,6 +61,8 @@ def go_to_rough_home_via_ifelse(esp, pos):
     return desired_rpy, actual_rpy
 
 
+#######################################################################################################################
+# The remaining code, below this line, shows refactored version of original code (after we recognized pattern).
 def rpy_move(esp, rpy):
     """
     return (r, p, y) tuple of actual position after attempt to move to input (desired) position
@@ -69,9 +71,8 @@ def rpy_move(esp, rpy):
     :param rpy: (r, p, y) tuple for desired position
     :return: (r, p, y) tuple for actual position
     """
-    # TODO Do you see how the combo of this function with stage_move recognizes original repeat/pattern and refactors?
-    # TODO Realize if/when you do more and more programming you will get better at recognizing and refactoring.
-    # TODO Realize that refactoring comes after first pass that creates the repeats/pattern.
+    # TODO See how the combo of this function with stage_move recognizes original repeat/pattern and refactors.
+    # TODO Realize as you do more and more programming you will get better at recognizing and refactoring.
     actual_ax1 = stage_move(esp, 1, rpy[0])  # roll
     actual_ax2 = stage_move(esp, 2, rpy[1])  # pitch
     actual_ax3 = stage_move(esp, 3, rpy[2])  # yaw
@@ -91,9 +92,9 @@ def stage_move(esp, ax, angle):
     # FIXME log moves here with 2 consecutive lines in log file for easy comparison of RPY values (desired vs. actual)
     stage = esp.axis(ax)  # open esp axis, ax, number: 1, 2 or 3
     stage.move_to(angle)  # move to this angle
-    actual = angle        # TODO replace this with result from query to get actual angle achieved
+    actual = angle        # TODO replace right-hand side with query to get actual angle achieved
 
-    # TODO think about things we might do if "actual not close enough to desired" (maybe just abort!?)
+    # TODO think about things we might do if "actual not close enough to desired" - maybe just raise exception & abort?
 
     return actual
 
