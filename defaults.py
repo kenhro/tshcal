@@ -37,10 +37,13 @@ HOMES = {
         '-z':  (5, 5, 5),
 }
 
+# map axis letter to index for TSH axes
+TSH_AX = {'x': 0, 'y': 1, 'z': 2}
+
 # ------- Time Constants ------- #
 
 # TSH settling time (in seconds) -- amount of time allocated for accelerometer to "settle" after a move & before reading
-TSH_SETTLE_SEC = 3
+TSH_SETTLE_SEC = 5
 
 # TSH acceleration buffer length (in seconds) -- amount of time to take mean (for example) with calibration find min/max
 TSH_BUFFER_SEC = 60
