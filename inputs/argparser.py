@@ -80,12 +80,7 @@ def start_str(t):
     :param t: string for time to start
     :return: string for time to start
     """
-    try:
-        outstr = dparser.parse(t)
-    except:
-        self.user_screwups += 1
-        raise
-    return outstr
+    return dparser.parse(t)
 
 
 def parse_inputs():
@@ -118,7 +113,7 @@ def parse_inputs():
     help_start = 'start time; default is %s' % DEFAULT_START
     parser.add_argument('-t', '--start', default=DEFAULT_START, type=start_str, help=help_start)
 
-    # FIXME we do not check that log directory spec in log_conf_file matches relative to outdir, assumed this above
+    # FIXME we do not check that log directory seen in log_conf_file matches relative to outdir, assumed this above
 
     # start logging
     log_conf_file = os.path.join(ROOT_DIR, 'logging', 'log.conf')

@@ -19,11 +19,12 @@ class Tsh(object):
 
 class TshAccelBuffer(object):
 
-    def __init__(self, tsh, num):
+    def __init__(self, tsh, sec):
         self.tsh = tsh  # tsh object -- to set/get some operating parameters
-        self.num = num  # size of data buffer (i.e. number of points)
+        self.sec = sec  # approximate size of data buffer (in seconds)
+        self.num = np.int(np.ceil(self.tsh.rate * sec))  # exact size of buffer (num pts)
         # TODO next 2 lines will fill very fast, but be careful...np.empty is garbage values
-        self.xyz = np.empty((num, 3))  # NOTE: this will contain garbage values
+        self.xyz = np.empty((self.num, 3))  # NOTE: this will contain garbage values
         self.xyz.fill(np.nan)          # NOTE: this cleans up garbage values, replacing with NaNs
         self.is_full = False           # flag that goes True when data buffer is full
         self.idx = 0
@@ -31,14 +32,16 @@ class TshAccelBuffer(object):
     def __str__(self):
         s = '%s: ' % self.__class__.__name__
         s += '%s, ' % self.tsh
-        s += f'num = {self.num:,}'  # pattern: f'{value:,}' for thousands comma separator
+        s += f'sec = {self.sec:,}'  # pattern: f'{value:,}' for thousands comma separator
         return s
 
     def write_spreadsheet(self, fname):
         print('writing spreadsheet data from %s buffer to %s' % (self.tsh.name, fname))
+        np.savetxt(fname, self.xyz, delimiter=',')
 
     def write_raw(self, fname):
         print('writing raw data from %s buffer to %s' % (self.tsh.name, fname))
+        np.save(fname, self.xyz)
 
     def add(self, more):
 
@@ -61,10 +64,10 @@ class TshAccelBuffer(object):
 
 def demo_buffer():
 
-    # create data buffer
-    num_rows = 9  # how many rows of x,y,z values
-    tsh = Tsh('tshes-44', 250.1, 1.2)  # last 2 args put/gotten for convenience here
-    buffer = TshAccelBuffer(tsh, num_rows)
+    # create data buffer -- at some pt in code before we need to give mean(counts) after GSS min/max found
+    sec = 1  # how many seconds-worth of TSH data (x,y,z acceleration values)
+    tsh = Tsh('tshes-44', 9, 0)  # last 2 args put/gotten here for convenience
+    buffer = TshAccelBuffer(tsh, sec)
 
     b = np.arange(6).reshape(2, 3)
     buffer.add(b)
@@ -75,13 +78,17 @@ def demo_buffer():
     b = np.arange(30).reshape(10, 3)
     buffer.add(b)
 
+    # buffer should be full by now, but let's try to add more data (should not be able to)
     b = np.arange(60).reshape(20, 3)
     buffer.add(b)
 
     print(buffer.xyz)
 
-    buffer.write_spreadsheet('/tmp/somefile.xlsx')
-    buffer.write_raw('/tmp/filename.csv')
+    csv_file = 'c:/temp/foo.csv'
+    buffer.write_spreadsheet(csv_file)
+
+    npy_file = csv_file.replace('.csv', '.npy')
+    buffer.write_raw(npy_file)
 
 
 if __name__ == '__main__':
