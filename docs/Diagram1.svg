@@ -1,0 +1,416 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="8.5in"
+   height="11in"
+   viewBox="304 7 410.21 549.16552"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.91 r13725"
+   sodipodi:docname="Diagram1.svg">
+  <metadata
+     id="metadata146">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs
+     id="defs144" />
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1920"
+     inkscape:window-height="979"
+     id="namedview142"
+     showgrid="false"
+     units="in"
+     inkscape:zoom="0.72501916"
+     inkscape:cx="265.74803"
+     inkscape:cy="518.08437"
+     inkscape:window-x="0"
+     inkscape:window-y="28"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg2" />
+  <g
+     id="g4276"
+     transform="translate(15.340761,0)">
+    <g
+       transform="matrix(0.85485837,0,0,0.85485837,112.21701,35.427542)"
+       id="g4">
+      <path
+         inkscape:connector-curvature="0"
+         id="path6"
+         d="m 369.031,9 174.9,0 c 24.149,0 43.725,8.9543 43.725,20 0,11.0457 -19.576,20 -43.725,20 l -174.9,0 c -24.148,0 -43.725,-8.9543 -43.725,-20 0,-11.0457 19.577,-20 43.725,-20 z"
+         style="fill:#ffffff" />
+      <path
+         inkscape:connector-curvature="0"
+         id="path8"
+         d="m 369.031,9 174.9,0 c 24.149,0 43.725,8.9543 43.725,20 0,11.0457 -19.576,20 -43.725,20 l -174.9,0 c -24.148,0 -43.725,-8.9543 -43.725,-20 0,-11.0457 19.577,-20 43.725,-20"
+         style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2" />
+      <text
+         id="text10"
+         y="33"
+         x="456.48099"
+         style="font-style:normal;font-weight:normal;font-size:12.80000019px;font-family:sans-serif;text-anchor:middle;fill:#000000"
+         font-size="12.8">
+        <tspan
+           id="tspan12"
+           y="33"
+           x="456.48099">call to calibrate from main</tspan>
+      </text>
+    </g>
+    <g
+       transform="matrix(0.85485837,0,0,0.85485837,112.21701,35.427542)"
+       id="g14">
+      <rect
+         id="rect16"
+         height="38"
+         width="158.95"
+         y="85"
+         x="377.00601"
+         style="fill:#ffffff" />
+      <rect
+         id="rect18"
+         height="38"
+         width="158.95"
+         y="85"
+         x="377.00601"
+         style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2" />
+      <text
+         id="text20"
+         y="107.9"
+         x="456.48099"
+         style="font-style:normal;font-weight:normal;font-size:12.80000019px;font-family:sans-serif;text-anchor:middle;fill:#000000"
+         font-size="12.8">
+        <tspan
+           id="tspan22"
+           y="107.9"
+           x="456.48099">next rough home = 1</tspan>
+      </text>
+    </g>
+    <g
+       transform="matrix(0.85485837,0,0,0.85485837,112.21701,35.427542)"
+       id="g24">
+      <line
+         id="line26"
+         y2="75.263901"
+         x2="456.48099"
+         y1="49"
+         x1="456.48099"
+         style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2" />
+      <polygon
+         id="polygon28"
+         points="456.481,75.2639 461.481,72.7639 456.481,82.7639 451.481,72.7639 "
+         style="fill:#000000" />
+      <polygon
+         id="polygon30"
+         points="456.481,75.2639 461.481,72.7639 456.481,82.7639 451.481,72.7639 "
+         style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2" />
+    </g>
+    <g
+       transform="matrix(0.85485837,0,0,0.85485837,112.21701,35.427542)"
+       id="g32">
+      <rect
+         id="rect34"
+         height="38"
+         width="198.05"
+         y="242"
+         x="357.45599"
+         style="fill:#ffffff" />
+      <rect
+         id="rect36"
+         height="38"
+         width="198.05"
+         y="242"
+         x="357.45599"
+         style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2" />
+      <text
+         id="text38"
+         y="264.89999"
+         x="456.48099"
+         style="font-style:normal;font-weight:normal;font-size:12.80000019px;font-family:sans-serif;text-anchor:middle;fill:#000000"
+         font-size="12.8">
+        <tspan
+           id="tspan40"
+           y="264.89999"
+           x="456.48099">call gss to find min/max</tspan>
+      </text>
+    </g>
+    <g
+       transform="matrix(0.85485837,0,0,0.85485837,112.21701,35.427542)"
+       id="g42">
+      <rect
+         id="rect44"
+         height="54"
+         width="187.25"
+         y="151.5"
+         x="362.85599"
+         style="fill:#ffffff" />
+      <rect
+         id="rect46"
+         height="54"
+         width="187.25"
+         y="151.5"
+         x="362.85599"
+         style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2" />
+      <text
+         id="text48"
+         y="174.39999"
+         x="456.48099"
+         style="font-style:normal;font-weight:normal;font-size:12.80000019px;font-family:sans-serif;text-anchor:middle;fill:#000000"
+         font-size="12.8">
+        <tspan
+           id="tspan50"
+           y="174.39999"
+           x="456.48099">use trajectory to move</tspan>
+        <tspan
+           id="tspan52"
+           y="190.39999"
+           x="456.48099">to next rough home</tspan>
+      </text>
+    </g>
+    <g
+       transform="matrix(0.85485837,0,0,0.85485837,112.21701,35.427542)"
+       id="g54">
+      <polygon
+         id="polygon56"
+         points="456.481,412.639 351.526,359.319 456.481,306 561.437,359.319 "
+         style="fill:#ffffff" />
+      <polygon
+         id="polygon58"
+         points="456.481,412.639 351.526,359.319 456.481,306 561.437,359.319 "
+         style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2" />
+      <text
+         id="text60"
+         y="363.21899"
+         x="456.48099"
+         style="font-style:normal;font-weight:normal;font-size:12.79979992px;font-family:sans-serif;text-anchor:middle;fill:#000000"
+         font-size="12.7998">
+        <tspan
+           id="tspan62"
+           y="363.21899"
+           x="456.48099">found all min/max?</tspan>
+      </text>
+    </g>
+    <g
+       transform="matrix(0.85485837,0,0,0.85485837,112.21701,35.427542)"
+       id="g64">
+      <line
+         id="line66"
+         y2="141.76401"
+         x2="456.48099"
+         y1="123"
+         x1="456.48099"
+         style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2" />
+      <polygon
+         id="polygon68"
+         points="456.481,141.764 461.481,139.264 456.481,149.264 451.481,139.264 "
+         style="fill:#000000" />
+      <polygon
+         id="polygon70"
+         points="456.481,141.764 461.481,139.264 456.481,149.264 451.481,139.264 "
+         style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2" />
+    </g>
+    <g
+       transform="matrix(0.85485837,0,0,0.85485837,112.21701,35.427542)"
+       id="g72">
+      <line
+         id="line74"
+         y2="232.26401"
+         x2="456.48099"
+         y1="205.5"
+         x1="456.48099"
+         style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2" />
+      <polygon
+         id="polygon76"
+         points="456.481,232.264 461.481,229.764 456.481,239.764 451.481,229.764 "
+         style="fill:#000000" />
+      <polygon
+         id="polygon78"
+         points="456.481,232.264 461.481,229.764 456.481,239.764 451.481,229.764 "
+         style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2" />
+    </g>
+    <g
+       transform="matrix(0.85485837,0,0,0.85485837,112.21701,35.427542)"
+       id="g80">
+      <line
+         id="line82"
+         y2="296.26401"
+         x2="456.48099"
+         y1="280"
+         x1="456.48099"
+         style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2" />
+      <polygon
+         id="polygon84"
+         points="456.481,296.264 461.481,293.764 456.481,303.764 451.481,293.764 "
+         style="fill:#000000" />
+      <polygon
+         id="polygon86"
+         points="456.481,296.264 461.481,293.764 456.481,303.764 451.481,293.764 "
+         style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2" />
+    </g>
+    <g
+       transform="matrix(0.85485837,0,0,0.85485837,112.21701,35.427542)"
+       id="g88">
+      <polyline
+         id="polyline90"
+         points="351.526,359.319 305,359.319 305,178.5 353.12,178.5 "
+         style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2" />
+      <polygon
+         id="polygon92"
+         points="353.12,178.5 350.62,173.5 360.62,178.5 350.62,183.5 "
+         style="fill:#000000" />
+      <polygon
+         id="polygon94"
+         points="353.12,178.5 350.62,173.5 360.62,178.5 350.62,183.5 "
+         style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2" />
+    </g>
+    <text
+       id="text96"
+       y="353.43488"
+       x="394.85971"
+       style="font-style:normal;font-weight:normal;font-size:10.94201565px;font-family:sans-serif;text-anchor:start;fill:#000000"
+       font-size="12.7998">
+      <tspan
+         id="tspan98"
+         y="353.43488"
+         x="394.85971">NO</tspan>
+    </text>
+    <g
+       transform="matrix(0.85485837,0,0,0.85485837,112.21701,35.427542)"
+       id="g100">
+      <rect
+         id="rect102"
+         height="54"
+         width="187.25"
+         y="452.5"
+         x="362.85599"
+         style="fill:#ffffff" />
+      <rect
+         id="rect104"
+         height="54"
+         width="187.25"
+         y="452.5"
+         x="362.85599"
+         style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2" />
+      <text
+         id="text106"
+         y="475.39999"
+         x="456.48099"
+         style="font-style:normal;font-weight:normal;font-size:12.80000019px;font-family:sans-serif;text-anchor:middle;fill:#000000"
+         font-size="12.8">
+        <tspan
+           id="tspan108"
+           y="475.39999"
+           x="456.48099">use trajectory to move</tspan>
+        <tspan
+           id="tspan110"
+           y="491.39999"
+           x="456.48099">to first rough home</tspan>
+      </text>
+    </g>
+    <text
+       id="text112"
+       y="401.30695"
+       x="506.69653"
+       style="font-style:normal;font-weight:normal;font-size:10.94201565px;font-family:sans-serif;text-anchor:start;fill:#000000"
+       font-size="12.7998">
+      <tspan
+         id="tspan114"
+         y="401.30695"
+         x="506.69653">YES</tspan>
+    </text>
+    <g
+       transform="matrix(0.85485837,0,0,0.85485837,112.21701,35.427542)"
+       id="g116">
+      <line
+         id="line118"
+         y2="442.76401"
+         x2="456.48099"
+         y1="412.63901"
+         x1="456.48099"
+         style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2" />
+      <polygon
+         id="polygon120"
+         points="456.481,442.764 461.481,440.264 456.481,450.264 451.481,440.264 "
+         style="fill:#000000" />
+      <polygon
+         id="polygon122"
+         points="456.481,442.764 461.481,440.264 456.481,450.264 451.481,440.264 "
+         style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2" />
+    </g>
+    <g
+       transform="matrix(0.85485837,0,0,0.85485837,112.21701,35.427542)"
+       id="g124">
+      <rect
+         id="rect126"
+         height="38"
+         width="79.275002"
+         y="538.5"
+         x="416.84399"
+         style="fill:#ffffff" />
+      <rect
+         id="rect128"
+         height="38"
+         width="79.275002"
+         y="538.5"
+         x="416.84399"
+         style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2" />
+      <text
+         id="text130"
+         y="561.40002"
+         x="456.48099"
+         style="font-style:normal;font-weight:normal;font-size:12.80000019px;font-family:sans-serif;text-anchor:middle;fill:#000000"
+         font-size="12.8">
+        <tspan
+           id="tspan132"
+           y="561.40002"
+           x="456.48099">park</tspan>
+      </text>
+    </g>
+    <g
+       transform="matrix(0.85485837,0,0,0.85485837,112.21701,35.427542)"
+       id="g134">
+      <line
+         id="line136"
+         y2="528.76398"
+         x2="456.48099"
+         y1="506.5"
+         x1="456.48099"
+         style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2" />
+      <polygon
+         id="polygon138"
+         points="456.481,528.764 461.481,526.264 456.481,536.264 451.481,526.264 "
+         style="fill:#000000" />
+      <polygon
+         id="polygon140"
+         points="456.481,528.764 461.481,526.264 456.481,536.264 451.481,526.264 "
+         style="fill:none;fill-opacity:0;stroke:#000000;stroke-width:2" />
+    </g>
+  </g>
+  <rect
+     style="opacity:1;fill:#ff0000;fill-opacity:0.01176471;fill-rule:nonzero;stroke:#000000;stroke-width:1.65718293;stroke-miterlimit:4;stroke-dasharray:4.97154856, 1.65718286;stroke-dashoffset:0;stroke-opacity:1"
+     id="rect4274"
+     width="368.78546"
+     height="452.94656"
+     x="324.71228"
+     y="87.920433" />
+</svg>
