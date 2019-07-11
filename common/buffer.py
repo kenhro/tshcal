@@ -19,6 +19,8 @@ class Tsh(object):
 
 class TshAccelBuffer(object):
 
+    # TODO mean and std values for spreadsheet format and more robust file writing
+
     def __init__(self, tsh, sec):
         self.tsh = tsh  # tsh object -- to set/get some operating parameters
         self.sec = sec  # approximate size of data buffer (in seconds)
@@ -64,17 +66,26 @@ class TshAccelBuffer(object):
 
 def demo_buffer():
 
-    # create data buffer -- at some pt in code before we need to give mean(counts) after GSS min/max found
+    import os
+    import platform
+
+    # fake/dummy arguments for buffer creationg
     sec = 1  # how many seconds-worth of TSH data (x,y,z acceleration values)
-    tsh = Tsh('tshes-44', 9, 0)  # last 2 args put/gotten here for convenience
+    fs, k = 9.0, 0  # fake/dummy arguments for sample rate and gain
+
+    # create data buffer -- at some pt in code before we need mean(counts), probably just after GSS min/max found
+    tsh = Tsh('tshes-44', fs, k)
     buffer = TshAccelBuffer(tsh, sec)
 
+    # add some data to buffer (note shape is Nx3, with 3 columns for xyz)
     b = np.arange(6).reshape(2, 3)
     buffer.add(b)
 
+    # add some data to buffer (note shape is Nx3, with 3 columns for xyz)
     b = np.arange(9).reshape(3, 3)
     buffer.add(b)
 
+    # add some data to buffer (note shape is Nx3, with 3 columns for xyz)
     b = np.arange(30).reshape(10, 3)
     buffer.add(b)
 
@@ -84,7 +95,9 @@ def demo_buffer():
 
     print(buffer.xyz)
 
-    csv_file = 'c:/temp/foo.csv'
+    out_dir = 'c:/temp' if platform.system() == 'Windows' else '/tmp'
+    csv_file = os.path.join(out_dir, 'foo.csv')
+
     buffer.write_spreadsheet(csv_file)
 
     npy_file = csv_file.replace('.csv', '.npy')
