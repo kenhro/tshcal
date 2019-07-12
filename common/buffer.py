@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
 import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Tsh(object):
@@ -25,7 +28,7 @@ class TshAccelBuffer(object):
         self.tsh = tsh  # tsh object -- to set/get some operating parameters
         self.sec = sec  # approximate size of data buffer (in seconds)
         self.num = np.int(np.ceil(self.tsh.rate * sec))  # exact size of buffer (num pts)
-        # TODO next 2 lines will fill very fast, but be careful...np.empty is garbage values
+        # TODO next 2 lines fill array fast, but BE CAREFUL because np.empty is garbage values
         self.xyz = np.empty((self.num, 3))  # NOTE: this will contain garbage values
         self.xyz.fill(np.nan)          # NOTE: this cleans up garbage values, replacing with NaNs
         self.is_full = False           # flag that goes True when data buffer is full
@@ -49,7 +52,8 @@ class TshAccelBuffer(object):
 
         if self.is_full:
             # TODO log entry that we tried to add to a buffer that's already full
-            print('buffer already full')
+            print('Buffer already full')
+            logger.info('Buffer already full, array shape is %s' % str(self.xyz.shape))
             return
 
         offset = more.shape[0]
