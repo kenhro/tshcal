@@ -18,10 +18,10 @@ TSH_BUFFER_SEC = 60  # amount of time to take mean (for example) with calibratio
 
 # ---------------------------------------------------------------------------------------------------------------------
 # --- TIME DEFAULTS ---------------------------------------------------------------------------------------------------
-# time parameters (start at top of the next hour, but not sooner than 10 minutes from now)
+# time parameters (start at top of the next hour, but not sooner than 30 minutes from now)
 NOW = datetime.datetime.now()
 # FIXME with better strategy than this for default start (how relative to when program started or such)?
-DEFAULT_START = ceil_dtm(NOW + datetime.timedelta(minutes=10), datetime.timedelta(minutes=60))
+DEFAULT_START = ceil_dtm(NOW + datetime.timedelta(minutes=30), datetime.timedelta(minutes=60))
 
 # ---------------------------------------------------------------------------------------------------------------------
 # --- PATH DEFAULTS ---------------------------------------------------------------------------------------------------

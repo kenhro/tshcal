@@ -1,18 +1,19 @@
 import logging
+from tshcal.common.file_utils import get_basename_noext
 
 # create logger
-module_logger = logging.getLogger('main.tsh_commands')
+module_logger = logging.getLogger('tshcal.%s' % get_basename_noext(__file__))
 
 
 def set_tsh_state(args):
     """set tsh configuration via commanding"""
-    module_logger.info('set tsh state')
+    module_logger.debug('Setting tsh state.')
     return 42
 
 
 def get_tsh_state():
     """get tsh configuration via commanding"""
-    module_logger.info('get tsh state')
+    module_logger.debug('Getting tsh state.')
     return 42
 
 

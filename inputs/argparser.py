@@ -13,9 +13,10 @@ from dateutil import parser as dparser
 from tshcal.defaults import DEFAULT_OUTDIR
 from tshcal.defaults import DEFAULT_SENSOR, DEFAULT_RATE, DEFAULT_GAIN
 from tshcal.defaults import DEFAULT_START
+from tshcal.common.file_utils import get_basename_noext
 
 # create logger
-module_logger = logging.getLogger('main.argparser')
+module_logger = logging.getLogger('tshcal.%s' % get_basename_noext(__file__))
 
 
 def folder_str(f):
@@ -78,7 +79,7 @@ def sensor_str(s):
 
 
 def start_str(t):
-    """ return string provided only if it is a valid time at least 5 minutes from now
+    """ return string provided only if it is a valid time at least 30 minutes from now
 
     :param t: string for time to start
     :return: string for time to start
@@ -119,7 +120,7 @@ def parse_inputs():
     # FIXME we do not check that log directory seen in log_conf_file matches relative to outdir, assumed this above
 
     # parse arguments
-    module_logger.info('calling parse_args')
+    module_logger.debug('calling parse_args')
     args = parser.parse_args()
 
     return args
