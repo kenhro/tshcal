@@ -9,33 +9,33 @@ from tshcal.inputs import argparser
 from tshcal.commanding import tsh_commands
 from tshcal.defaults import ROOT_DIR
 
-# create logger
-log_file = os.path.join(ROOT_DIR, 'logging', 'tshcal.log')
-module_logger = logging.getLogger('main')
-module_logger.setLevel(logging.DEBUG)
 
-# create file handler which logs to DEBUG level
-fh = logging.FileHandler(log_file)
-fh.setLevel(logging.DEBUG)
+def get_logger(log_file):
 
-# create console handler with a higher log level
-ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)  # changed from ERROR to INFO
+    # create logger
+    logger = logging.getLogger('main')
+    logger.setLevel(logging.DEBUG)
 
-# create formatter and add it to the handlers
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(module)s : %(lineno)d - %(message)s')
-fh.setFormatter(formatter)
-ch.setFormatter(formatter)
+    # create file handler which logs to DEBUG level
+    fh = logging.FileHandler(log_file)
+    fh.setLevel(logging.DEBUG)
 
-# add the handlers to the logger
-module_logger.addHandler(fh)
-module_logger.addHandler(ch)
+    # create console handler with a higher log level
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)  # changed from ERROR to INFO
 
-module_logger.info('-' * 55)
-module_logger.info('log_file = %s' % log_file)
+    # create formatter and add it to the handlers
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(module)s : %(lineno)d - %(message)s')
+    fh.setFormatter(formatter)
+    ch.setFormatter(formatter)
+
+    # add the handlers to the logger
+    logger.addHandler(fh)
+    logger.addHandler(ch)
+    return logger
 
 
-def get_inputs():
+def get_inputs(module_logger):
 
     # parse arguments
     module_logger.info('parsing input arguments')
@@ -62,10 +62,13 @@ def get_inputs():
 def main():
 
     # create logger
-    
+    log_file = os.path.join(ROOT_DIR, 'logging', 'tshcal.log')
+    module_logger = get_logger(log_file)
+    module_logger.info('-' * 55)
+    module_logger.info('log_file = %s' % log_file)
 
     # get input arguments
-    args = get_inputs()
+    args = get_inputs(module_logger)
 
     # set tsh parameters
     tsh_state_desired = tsh_commands.set_tsh_state(args)
