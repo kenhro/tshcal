@@ -6,13 +6,16 @@ defaults and logic to help detect avoid invalid arguments."""
 
 import os
 import re
+import logging
 import argparse
 from dateutil import parser as dparser
-import logging.config
 
-from tshcal.defaults import DEFAULT_OUTDIR, ROOT_DIR
+from tshcal.defaults import DEFAULT_OUTDIR
 from tshcal.defaults import DEFAULT_SENSOR, DEFAULT_RATE, DEFAULT_GAIN
 from tshcal.defaults import DEFAULT_START
+
+# create logger
+module_logger = logging.getLogger('main.argparser')
 
 
 def folder_str(f):
@@ -115,34 +118,8 @@ def parse_inputs():
 
     # FIXME we do not check that log directory seen in log_conf_file matches relative to outdir, assumed this above
 
-    # start logging
-    log_conf_file = os.path.join(ROOT_DIR, 'logging', 'log.conf')
-    logging.config.fileConfig(log_conf_file)  # get log config from a file
-    logger = logging.getLogger('root')
-    logger.info('-' * 55)
-    logger.info('parsing input arguments')
-
     # parse arguments
+    module_logger.info('calling parse_args')
     args = parser.parse_args()
 
-    # show arguments
-    logger.info(str(args).replace('Namespace', 'inputs:'))
-
-    # adjust log level based on verbosity input args
-    if args.quiet:
-        logger.warning('switching to quiet for logging (WARNING level)')
-        level = logging.WARNING
-    elif args.verbose:
-        level = logging.DEBUG
-    else:
-        level = logging.INFO
-
-    logger.setLevel(level)
-    for handler in logger.handlers:
-        handler.setLevel(level)
-
     return args
-
-
-if __name__ == '__main__':
-    args = parse_inputs()

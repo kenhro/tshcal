@@ -1,12 +1,19 @@
 import logging
 
+# create logger
+module_logger = logging.getLogger('main.tsh_commands')
 
-def set_tsh(a):
+
+def set_tsh_state(args):
     """set tsh configuration via commanding"""
+    module_logger.info('set tsh state')
+    return 42
 
-    # start logging
-    logger = logging.getLogger('root')
-    logger.info('use commanding interface to configure tsh')
+
+def get_tsh_state():
+    """get tsh configuration via commanding"""
+    module_logger.info('get tsh state')
+    return 42
 
 
 def fake_query_tsh_sample_rate(tsh_id):
