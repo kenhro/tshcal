@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """This module utilizes argparse from the standard library to define what arguments are required and handles those with
 defaults and logic to help detect avoid invalid arguments."""
@@ -6,13 +6,17 @@ defaults and logic to help detect avoid invalid arguments."""
 
 import os
 import re
+import logging
 import argparse
 from dateutil import parser as dparser
-import logging.config
 
-from defaults import DEFAULT_OUTDIR, ROOT_DIR
-from defaults import DEFAULT_SENSOR, DEFAULT_RATE, DEFAULT_GAIN
-from defaults import DEFAULT_START
+from tshcal.defaults import DEFAULT_OUTDIR
+from tshcal.defaults import DEFAULT_SENSOR, DEFAULT_RATE, DEFAULT_GAIN
+from tshcal.defaults import DEFAULT_START
+from tshcal.common.file_utils import get_basename_noext
+
+# create logger
+module_logger = logging.getLogger('tshcal.%s' % get_basename_noext(__file__))
 
 
 def folder_str(f):
@@ -75,17 +79,12 @@ def sensor_str(s):
 
 
 def start_str(t):
-    """ return string provided only if it is a valid time at least 5 minutes from now
+    """ return string provided only if it is a valid time at least 30 minutes from now
 
     :param t: string for time to start
     :return: string for time to start
     """
-    try:
-        outstr = dparser.parse(t)
-    except:
-        self.user_screwups += 1
-        raise
-    return outstr
+    return dparser.parse(t)
 
 
 def parse_inputs():
@@ -118,37 +117,10 @@ def parse_inputs():
     help_start = 'start time; default is %s' % DEFAULT_START
     parser.add_argument('-t', '--start', default=DEFAULT_START, type=start_str, help=help_start)
 
-    # FIXME we do not check that log directory spec in log_conf_file matches relative to outdir, assumed this above
+    # FIXME we do not check that log directory seen in log_conf_file matches relative to outdir, assumed this above
 
-    # start logging
-    log_conf_file = os.path.join(ROOT_DIR, 'logging', 'log.conf')
-    logging.config.fileConfig(log_conf_file)  # get log config from a file
-    logger = logging.getLogger('root')
-    logger.info('-' * 55)
-    logger.info('parsing input arguments')
-
-    # parse
+    # parse arguments
+    module_logger.debug('calling parse_args')
     args = parser.parse_args()
 
-    # show args
-    logger.info(str(args).replace('Namespace', 'inputs:'))
-
-    # adjust log level based on verbosity input args
-    if args.quiet:
-        logger.warning('switching to quiet for logging (WARNING level)')
-        level = logging.WARNING
-    elif args.verbose:
-        level = logging.DEBUG
-    else:
-        level = logging.INFO
-
-    logger.setLevel(level)
-    for handler in logger.handlers:
-        handler.setLevel(level)
-
     return args
-
-
-if __name__ == '__main__':
-
-    args = parse_inputs()

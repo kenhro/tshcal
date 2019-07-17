@@ -1,0 +1,9 @@
+-- A location for notes on setting up connection to Newport controller
+
+- Install pyserial, not serial.  Had to uninstall serial an delete directory, re-install pyserial.
+- import serial   NOT import pyserial
+-  Had to give permissions to access serial port.  Command run as root in terminal :
+   usermod -a -G dialout pims
+    - apt-get remove modemmanager
+- changed permissions in /dev/ttyUSB0: chmod a+rw /dev/ttyUSB0.
+
