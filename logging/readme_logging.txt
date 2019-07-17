@@ -31,3 +31,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+See here for logging from multiple modules, and here for logging configuration for code which will be used as a library module by other code.
