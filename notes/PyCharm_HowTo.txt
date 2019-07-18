@@ -1,0 +1,6 @@
+How to rename a PyCharm project: First close the project, then change the name of the folder containing the project.
+Next, go into the project folder and open the .idea folder, change the filename of the .iml file, then open the .name
+file and edit the first line in there, and save.  Now open the directory, and all should be well.
+
+The last part of this goes awry.  No .name file.  Use an editor tool (like Sublime) to find all strings in files within
+your project folder and replace old project name string with new.  Close all and reopen folder in PyCharm for that to work.
