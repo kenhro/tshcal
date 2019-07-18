@@ -6,9 +6,11 @@ import time
 import datetime
 import logging
 import logging.config
+import numpy as np
 
 from tshcal.inputs import argparser
 from tshcal.commanding import tsh_commands
+from tshcal.common import buffer
 from tshcal.defaults import ROOT_DIR
 
 
@@ -83,6 +85,37 @@ def wait_for_start_time(s, mod_logger):
     mod_logger.info('Faking that the calibration start time, %s, has been reached.  Begin calibrating now.' % s)
 
 
+def get_tsh_buffer_summary():
+
+    # FIXME significant parts of this function are for quick demo purposes only, so scrutinize and fix
+
+    # fake/dummy arguments for buffer creating
+    sec = 1  # how many seconds-worth of TSH data (x,y,z acceleration values)
+    fs, k = 9.0, 0  # fake/dummy arguments for sample rate and gain
+
+    # create data buffer -- at some pt in code before we need mean(counts), probably just after GSS min/max found
+    tsh = buffer.Tsh('tshes-44', fs, k)
+    buff = buffer.TshAccelBuffer(tsh, sec)
+
+    # add some data to buffer (note shape is Nx3, with 3 columns for xyz)
+    b = np.arange(6).reshape(2, 3)
+    buff.add(b)
+
+    # add some data to buffer (note shape is Nx3, with 3 columns for xyz)
+    b = np.arange(9).reshape(3, 3)
+    buff.add(b)
+
+    # add some data to buffer (note shape is Nx3, with 3 columns for xyz)
+    b = np.arange(30).reshape(10, 3)
+    buff.add(b)
+
+    # buffer should be full by now, but let's try to add more data (should not be able to)
+    b = np.arange(60).reshape(20, 3)
+    buff.add(b)
+
+    return str(buff)
+
+
 def main():
 
     # create logger
@@ -106,6 +139,9 @@ def main():
     else:
         # TODO give more info here -- what exactly does not match?
         raise AssertionError('The tsh actual state does NOT match our desired state.')
+
+    # create buffer to capture 5-seconds worth of TSH data and show user summary of what we got
+    get_tsh_buffer_summary()
 
     # FIXME do we need to do anything prep/config for ESP here? (e.g. GENERAL MODE SELECTION or STATUS FUNCTIONS...
     # FIXME ...maybe from Table 3.5.1 of ESP301 User Guide or possibly something else)?

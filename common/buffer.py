@@ -3,7 +3,10 @@
 import numpy as np
 import logging
 
-logger = logging.getLogger(__name__)
+from tshcal.common.file_utils import get_basename_noext
+
+# create logger
+module_logger = logging.getLogger('tshcal.%s' % get_basename_noext(__file__))
 
 
 class Tsh(object):
@@ -24,15 +27,18 @@ class TshAccelBuffer(object):
 
     # TODO mean and std values for spreadsheet format and more robust file writing
 
-    def __init__(self, tsh, sec):
+    def __init__(self, tsh, sec, logger=module_logger):
         self.tsh = tsh  # tsh object -- to set/get some operating parameters
         self.sec = sec  # approximate size of data buffer (in seconds)
+        self.logger = logger
+        self.logger.debug('Initializing %s.' % self.__class__.__name__)
         self.num = np.int(np.ceil(self.tsh.rate * sec))  # exact size of buffer (num pts)
         # TODO next 2 lines fill array fast, but BE CAREFUL because np.empty is garbage values
         self.xyz = np.empty((self.num, 3))  # NOTE: this will contain garbage values
         self.xyz.fill(np.nan)          # NOTE: this cleans up garbage values, replacing with NaNs
         self.is_full = False           # flag that goes True when data buffer is full
         self.idx = 0
+        self.logger.debug('Done initializing %s.' % self.__class__.__name__)
 
     def __str__(self):
         s = '%s: ' % self.__class__.__name__
@@ -51,19 +57,20 @@ class TshAccelBuffer(object):
     def add(self, more):
 
         if self.is_full:
-            # TODO log entry that we tried to add to a buffer that's already full
-            print('Buffer already full')
-            logger.info('Buffer already full, array shape is %s' % str(self.xyz.shape))
+            self.logger.warning('Buffer already full, array shape is %s.' % str(self.xyz.shape))
             return
 
         offset = more.shape[0]
         if self.idx + offset > self.xyz.shape[0]:
             offset = self.xyz[self.idx:, :].shape[0]
             self.xyz[self.idx:self.idx + offset, :] = more[0:offset, :]
+            self.logger.debug('Buffer added %d xyz records.' % offset)
             self.is_full = True
-            # TODO add log entry that TshAccelBuffer is now full (with how many rows)
+            self.logger.warning('Buffer now full, stop adding, array shape is %s.' % str(self.xyz.shape))
         else:
             self.xyz[self.idx:self.idx + offset, :] = more
+            self.logger.debug('Buffer added %d xyz records.' % offset)
+
         # print(self.idx, self.idx + offset)
         self.idx = self.idx + offset
 
