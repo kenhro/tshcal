@@ -37,22 +37,10 @@ def move_rig_get_counts(ax, a):
 
     # TODO replace dummy call with actual rig control code
     # TODO make variable for time to take data "data span"
-    # TODO find physical constraints for angles
     # TODO set up socket connection to TSH in order to get 1 min of data
     # TODO take average of the data
     # TODO see GoldenSectionSearch class' _set_ax method for validating rig axis string
     return dummy_get_counts(a)
-
-
-def example_sleep(t):
-    """ return input datetime plus delta
-
-    :param inputA:  object
-    :return: inputA
-    """
-    print("Sleeping now for " + str(t) + " seconds.")
-    sleep(t)
-    return 0
 
 
 def move_to_pos(esp, pos):
@@ -322,13 +310,17 @@ if __name__ == '__main__':
     esp.axis(1).on()
     esp.axis(2).on()
     esp.axis(3).on()
-    for item in axis:
+    # Axis.query(position(self=esp))
+    # position(self=esp)
+    print(Axis.query())
+
+    # prototype_routine()
+
+    '''for item in axis:
         move_to_rough_home(esp, item)
         print(esp.axis(1).position)
         print(esp.axis(2).position)
-        print(esp.axis(3).position)
-
-
+        print(esp.axis(3).position)'''
 
     # demo()
 
@@ -340,7 +332,6 @@ if __name__ == '__main__':
     stage.on()
     print(stage.position)# print stage ID
     stage.move_by(-5, True)
-    example_sleep(2)# Move to position 1.2 mm
     print(stage.position)
     stage.move_by(5, True)
     print(stage.position)# print stage ID"""
