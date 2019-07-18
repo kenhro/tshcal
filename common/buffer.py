@@ -17,7 +17,7 @@ class Tsh(object):
         self.gain = gain  # sample rate in sa/sec
 
     def __str__(self):
-        s = 'TSH = %s, ' % self.name
+        s = '%s, ' % self.name
         s += 'rate = %.4f sa/sec, ' % self.rate
         s += 'gain = %.1f' % self.gain
         return s

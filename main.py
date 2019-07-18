@@ -140,8 +140,10 @@ def main():
         # TODO give more info here -- what exactly does not match?
         raise AssertionError('The tsh actual state does NOT match our desired state.')
 
-    # create buffer to capture 5-seconds worth of TSH data and show user summary of what we got
-    get_tsh_buffer_summary()
+    # create buffer to capture few seconds' worth of TSH data and show user summary of what we got
+    summary = get_tsh_buffer_summary()
+
+    module_logger.info(summary)
 
     # FIXME do we need to do anything prep/config for ESP here? (e.g. GENERAL MODE SELECTION or STATUS FUNCTIONS...
     # FIXME ...maybe from Table 3.5.1 of ESP301 User Guide or possibly something else)?
