@@ -86,21 +86,29 @@ def fake_move_to(p):
     print(p)
 
 
-def move_axis(ax, pos):
+def move_axis(esp, ax, pos):
+    """return float for actual position after trying to move axis, ax, of esp object to desired pos, angle in degrees"""
+
+    # get reference to axis (aka stage here), and turn it on
     stage = esp.axis(ax)
     stage.on()
+
+    # move axis to desired position
     stage.move_to(pos, True)
-    currpos = stage.position
-    print(currpos)
+
+    # query for actual position achieved
+    actual_pos = stage.position
+
+    return actual_pos
 
 
-def prototype_routine():
+def prototype_routine(m):
     # currently at +x
     # gss for +x
     # data collection
 
     # move to -z rough home
-    move_axis(2, 80)
+    actual_pos = move_axis(m, 2, 80)
     '''stage2 = esp.axis(2)
     stage2.on()
     stage2.move_to(80, True)'''
@@ -109,7 +117,7 @@ def prototype_routine():
     # data collection
 
     # move to +y
-    move_axis(3, -90)
+    actual_pos = move_axis(m, 3, -90)
     '''stage3 = esp.axis(3)
     stage3.on()
     stage3.move_to(-90, True)'''
@@ -118,15 +126,15 @@ def prototype_routine():
     # data collection
 
     # move to -x rough home
-    move_axis(2, 170)
+    actual_pos = move_axis(m, 2, 170)
     '''stage2.move_to(170, True)'''
     # currently at -x
     # gss for -x
     # data collection
 
     # move to -y
-    move_axis(2, -100)
-    move_axis(3, -90)
+    actual_pos = move_axis(m, 2, -100)
+    actual_pos = move_axis(m, 3, -90)
     '''stage2.move_to(-100, True)
     stage3.move_to(-90, True)'''
     # currently at -y
@@ -134,14 +142,14 @@ def prototype_routine():
     # data collection
 
     # move to +z
-    move_axis(3, 0)
+    actual_pos = move_axis(m, 3, 0)
     '''stage3.move_to(0, True)'''
     # currently at +z
     # gss for +z
     # data collection
 
     # move to +x
-    move_axis(2, 0)
+    actual_pos = move_axis(m, 2, 0)
     '''stage2.move_to(0, True)'''
     # currently at +x
     # data collection
@@ -334,7 +342,7 @@ if __name__ == '__main__':
     # print(Axis.query())
     # print(esp.axis(1).position)
 
-    prototype_routine()
+    prototype_routine(esp)
 
     '''for item in axis:
         move_to_rough_home(esp, item)
