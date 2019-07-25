@@ -86,43 +86,65 @@ def fake_move_to(p):
     print(p)
 
 
+def move_axis(ax, pos):
+    stage = esp.axis(ax)
+    stage.on()
+    stage.move_to(pos, True)
+    currpos = stage.position
+    print(currpos)
+
+
 def prototype_routine():
     # currently at +x
     # gss for +x
+    # data collection
 
     # move to -z rough home
-    stage2 = esp.axis(2)
+    move_axis(2, 80)
+    '''stage2 = esp.axis(2)
     stage2.on()
-    stage2.move_to(80, True)
+    stage2.move_to(80, True)'''
     # currently at -z
     # gss for -z
+    # data collection
 
     # move to +y
-    stage3 = esp.axis(3)
+    move_axis(3, -90)
+    '''stage3 = esp.axis(3)
     stage3.on()
-    stage3.move_to(-90, True)
+    stage3.move_to(-90, True)'''
     # currently at +y
     # gss for +y
+    # data collection
 
     # move to -x rough home
-    stage2.move_to(170, True)
+    move_axis(2, 170)
+    '''stage2.move_to(170, True)'''
     # currently at -x
     # gss for -x
+    # data collection
 
     # move to -y
-    stage2.move_to(-100, True)
-    stage3.move_to(-90, True)
+    move_axis(2, -100)
+    move_axis(3, -90)
+    '''stage2.move_to(-100, True)
+    stage3.move_to(-90, True)'''
     # currently at -y
     # gss for -y
+    # data collection
 
     # move to +z
-    stage3.move_to(0, True)
+    move_axis(3, 0)
+    '''stage3.move_to(0, True)'''
     # currently at +z
     # gss for +z
+    # data collection
 
     # move to +x
-    stage2.move_to(0, True)
+    move_axis(2, 0)
+    '''stage2.move_to(0, True)'''
     # currently at +x
+    # data collection
 
 
 def move_to_rough_home(esp, pos):
@@ -305,16 +327,14 @@ if __name__ == '__main__':
 
     axis = {'+x', '-x', '+y', '-y', '+z', '-z'}
 
-    '''move_to_pos(esp, '-z')
-    raise SystemExit'''
     esp.axis(1).on()
     esp.axis(2).on()
     esp.axis(3).on()
     # Axis.query(position(self=esp))
-    # position(self=esp)
-    print(Axis.query())
+    # print(Axis.query())
+    # print(esp.axis(1).position)
 
-    # prototype_routine()
+    prototype_routine()
 
     '''for item in axis:
         move_to_rough_home(esp, item)
