@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import re
 import numpy as np
 import logging
 
@@ -12,15 +13,24 @@ module_logger = logging.getLogger('tshcal.%s' % get_basename_noext(__file__))
 class Tsh(object):
 
     def __init__(self, name, rate, gain):
+        self._validate_name(name)
         self.name = name  # i.e. tsh_id (e.g. tshes-13)
         self.rate = rate  # sample rate in sa/sec
-        self.gain = gain  # sample rate in sa/sec
+        self.gain = gain  # gain [code?]  # FIXME figure out if we want code or actual gain value here [probably code!]
 
     def __str__(self):
         s = '%s, ' % self.name
         s += 'rate = %.4f sa/sec, ' % self.rate
         s += 'gain = %.1f' % self.gain
         return s
+
+    def _validate_name(self, name):
+        regexp = re.compile(r'^tshes-\d{2}$')
+        if regexp.search(name):
+            module_logger.debug("Validated %s's name attribute." % self.__class__.__name__)
+        else:
+            module_logger.info("Invalid %s.name attribute, doesn't match regular expression." % self.__class__.__name__)
+            raise ValueError("Invalid %s.name attribute, doesn't match regular expression." % self.__class__.__name__)
 
 
 class TshAccelBuffer(object):
@@ -33,9 +43,9 @@ class TshAccelBuffer(object):
         self.logger = logger
         self.logger.debug('Initializing %s.' % self.__class__.__name__)
         self.num = np.int(np.ceil(self.tsh.rate * sec))  # exact size of buffer (num pts)
-        # TODO next 2 lines fill array fast, but BE CAREFUL because np.empty is garbage values
-        self.xyz = np.empty((self.num, 3))  # NOTE: this will contain garbage values
-        self.xyz.fill(np.nan)          # NOTE: this cleans up garbage values, replacing with NaNs
+        # TODO BE CAREFUL: next 2 lines fill array fast, BUT np.empty will contain garbage values
+        self.xyz = np.empty((self.num, 3))  # this will contain garbage values
+        self.xyz.fill(np.nan)          # this cleans up garbage values, replacing with NaNs
         self.is_full = False           # flag that goes True when data buffer is full
         self.idx = 0
         self.logger.debug('Done initializing %s.' % self.__class__.__name__)
