@@ -157,8 +157,10 @@ def main():
     # delay until start time to begin calibration
     wait_for_start_time(args.start, module_logger)
 
-    # TODO call Will's prototype/template code -- that which actually moves rig and gathers calibration data
+    # call routine that does the calibration
     esp_commands.run_cal()
+
+    module_logger.info('- - - Calibration Complete - - - -')
 
     return 0  # return zero for success, which is typical Linux command line behavior
 

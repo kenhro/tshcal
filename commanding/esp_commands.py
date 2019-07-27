@@ -176,6 +176,8 @@ def refact2(esp):
 # TODO compare this refact3 function to refact2 routine above
 def refact3(esp):
 
+    # FIXME it's not good practice to assume other axes are where we want them, so move to absolute RPY, not just R or P or Y
+
     move_to_rough_home_get_counts(esp, 1, '+x', [(2, 0)])
 
     move_to_rough_home_get_counts(esp, 2, '-z', [(2, 80)])
@@ -196,10 +198,10 @@ def refact3(esp):
 # TODO compare this calibration function to refact3 routine above
 def calibration(esp):
 
-    # empirically-derived order for rough homes to visit such that cables and such are nicely kept
+    # empirically-derived order for rough homes transition trajectories so that cables and such are nicely kept
     nice_order = ['+x', '-z', '+y', '-x', '-y', '+z']
 
-    # FIXME the above nice_order should probably be relocated to defaults and be called CAL_AX_ORDER or such there
+    # FIXME nice_order should be relocated to defaults & be called CAL_AX_ORDER there and imported like ROUGH_HOMES here
 
     # iterate over rough homes in nice order as specified
     for ax in nice_order:
