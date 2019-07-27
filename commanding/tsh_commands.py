@@ -1,8 +1,7 @@
 import logging
-from tshcal.common.file_utils import get_basename_noext
 
 # create logger
-module_logger = logging.getLogger('tshcal.%s' % get_basename_noext(__file__))
+module_logger = logging.getLogger('tshcal')
 
 
 def set_tsh_state(args):

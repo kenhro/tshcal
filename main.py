@@ -10,6 +10,7 @@ import numpy as np
 
 from tshcal.inputs import argparser
 from tshcal.commanding import tsh_commands
+from tshcal.commanding import esp_commands
 from tshcal.common import buffer
 from tshcal.defaults import ROOT_DIR
 
@@ -157,6 +158,7 @@ def main():
     wait_for_start_time(args.start, module_logger)
 
     # TODO call Will's prototype/template code -- that which actually moves rig and gathers calibration data
+    esp_commands.run_cal()
 
     return 0  # return zero for success, which is typical Linux command line behavior
 
