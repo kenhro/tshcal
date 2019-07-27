@@ -31,7 +31,7 @@ DEFAULT_OUTDIR = 'c:/temp' if os.name == 'nt' else '/tmp'  # results/output dire
 # ---------------------------------------------------------------------------------------------------------------------
 # --- PROGRAM DEFAULTS ------------------------------------------------------------------------------------------------
 # rough homes dictionary defines 6 approximate starting positions (FIXME does this account for the shim?)
-HOMES = {
+ROUGH_HOMES = {
         # POS   R     P    Y
         '+x':  (0,    0,   0),
         '-x':  (0,  170,   0),

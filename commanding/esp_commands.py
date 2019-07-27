@@ -6,6 +6,8 @@ import numpy as np
 from collections import deque
 from newportESP import ESP, Axis
 
+from tshcal.defaults import ROUGH_HOMES
+
 # create logger
 module_logger = logging.getLogger('tshcal')
 
@@ -32,7 +34,46 @@ def move_axis(esp, ax, pos):
     return actual_pos
 
 
-# TODO compare what we had as a rough draft of prototype_routine to calibration function below
+def move_to_rough_home_get_counts(esp, num, rhome, axpos):
+
+    module_logger.info('Go to calibration %s rough home (position %d of 6).' % (rhome, num))
+    for ax, pos in axpos:
+        actual_pos = move_axis(esp, ax, pos)
+    # currently at +x rough home
+    # gss for +x
+    # data collection for +x
+
+
+def move_to_rough_home(esp, rig_ax):
+    """Move calibration rig to desired rough home position (i.e. "move to TSH +X UP or TSH -Y UP, etc.").
+
+    Parameters
+    ----------
+    esp : ESP object
+          driver for Newport's ESP 301 motion controller.
+    rig_ax: str
+         designation for rough home position (+x, -x, +y, -y, +z, -z)
+
+    Returns
+    -------
+    tuple, (r, p, y), of actual positions, which are angles in degrees
+
+    """
+    module_logger.info('Go to calibration %s rough home.' % rig_ax)
+    roll, pitch, yaw = ROUGH_HOMES[rig_ax]
+
+    # adjust roll, then pitch, then yaw to achieve rough home position
+    actual_roll = move_axis(esp, 1, roll)
+    actual_pitch = move_axis(esp, 2, pitch)
+    actual_yaw = move_axis(esp, 3, yaw)
+
+    module_logger.info('Now at %s rough home, actual RPY = (%.3f, %.3f, %.3f).' %
+                       (rig_ax, actual_roll, actual_pitch, actual_yaw))
+
+    return actual_roll, actual_pitch, actual_yaw
+
+
+# TODO compare what we had as a rough draft of prototype_routine to refact2 function below
 def prototype_routine(m):
 
     # currently at +x
@@ -87,8 +128,8 @@ def prototype_routine(m):
     # data collection
 
 
-# TODO compare this calibration function to what we had as a rough draft of prototype_routine above
-def calibration(esp):
+# TODO compare refact2 function to what we had for rough draft prototype_routine above & to refact3 routine below
+def refact2(esp):
 
     module_logger.info('Go to calibration +x rough home (position 1 of 6).')
     actual_pos = move_axis(esp, 2, 0)
@@ -132,41 +173,42 @@ def calibration(esp):
     module_logger.info('Finished calibration, so park at +x rough home.')
 
 
-def move_to_rough_home(esp, pos):
-    """Move calibration rig to desired rough home position (i.e. "move to TSH +X UP or TSH -Y UP, etc.").
+# TODO compare this refact3 function to refact2 routine above
+def refact3(esp):
 
-    Parameters
-    ----------
-    esp : ESP object
-          driver for Newport's ESP 301 motion controller.
-    pos: str
-         designation for rough home position (+x, -x, +y, -y, +z, -z)
+    move_to_rough_home_get_counts(esp, 1, '+x', [(2, 0)])
 
-    Returns
-    -------
-    None
+    move_to_rough_home_get_counts(esp, 2, '-z', [(2, 80)])
 
-    """
-    r = {'+x': 0, '-x': 0, '+y': 0, '-y': 0, '+z': 0, '-z': 0}
-    p = {'+x': 0, '-x': 170, '+y': 80, '-y': -100, '+z': -100, '-z': 80}
-    y = {'+x': 0, '-x': 0, '+y': -90, '-y': -90, '+z': 0, '-z': 0}
+    move_to_rough_home_get_counts(esp, 3, '+y', [(3, -90)])
 
-    '''logging.log(logging.ERROR, "unknown axis:" + pos)
-    raise SystemExit'''
-    stage1 = esp.axis(1)
-    stage1.on()
-    # stage1.move_to(r[pos], True)
-    fake_move_to(r[pos], True)
-    raise SystemExit
+    move_to_rough_home_get_counts(esp, 4, '-x', [(2, 170)])
 
-    stage2 = esp.axis(2)
-    stage2.on()
-    stage2.move_to(p[pos], True)
+    move_to_rough_home_get_counts(esp, 5, '-y', [(2, -100), (3, -90)])
 
-    stage3 = esp.axis(3)
-    stage3.on()
-    stage3.move_to(y[pos], True)
-    logging.log(logging.INFO, "moved to " + pos + '.')
+    move_to_rough_home_get_counts(esp, 6, '+z', [(3, 0)])
+
+    # move back to +x rough home for convenience
+    actual_pos = move_axis(esp, 2, 0)
+    module_logger.info('Finished calibration, so park at +x rough home.')
+
+
+# TODO compare this calibration function to refact3 routine above
+def calibration(esp):
+
+    # empirically-derived order for rough homes to visit such that cables and such are nicely kept
+    nice_order = ['+x', '-z', '+y', '-x', '-y', '+z']
+
+    # FIXME the above nice_order should probably be relocated to defaults and be called CAL_AX_ORDER or such there
+
+    # iterate over rough homes in nice order as specified
+    for ax in nice_order:
+        actual_rpy = move_to_rough_home(esp, ax)
+        module_logger.info('NOT YET IMPLEMENTED: Do gss for %s.' % ax)  # this will include data collect & write results
+
+    # move back to +x rough home for convenience
+    module_logger.info('Finished calibration, so park at +x rough home.')
+    actual_rpy = move_to_rough_home(esp, '+x')
 
 
 def run_cal():

@@ -32,7 +32,7 @@ class FakeAxis(Axis):
         self.write("PA" + str(pos))
         if wait:
             sleep(0.25)
-        self._pos = pos - 1.0
+        self._pos = pos - 1.0  # FIXME this is just subtracting one to give actual position other than what's desired
 
     @property
     def position(self):
