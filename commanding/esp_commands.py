@@ -6,7 +6,9 @@ import numpy as np
 from collections import deque
 from newportESP import ESP, Axis
 
-from tshcal.defaults import ROUGH_HOMES
+# FIXME refactor to use ESP instead of FakeESP
+from tshcal.tests.fake_esp import FakeESP  # faking ESP object to facilitate the demo code here
+from tshcal.defaults import ROUGH_HOMES, NICE_ORDER
 
 # create logger
 module_logger = logging.getLogger('tshcal')
@@ -196,26 +198,25 @@ def refact3(esp):
 
 
 # TODO compare this calibration function to refact3 routine above
-def calibration(esp):
+def calibration(esp, ax_order=NICE_ORDER):
+    """return status/exit code that results from attempt to run calibration given motion controller object, esp"""
 
-    # empirically-derived order for rough homes transition trajectories so that cables and such are nicely kept
-    nice_order = ['+x', '-z', '+y', '-x', '-y', '+z']
-
-    # FIXME nice_order should be relocated to defaults & be called CAL_AX_ORDER there and imported like ROUGH_HOMES here
-
-    # iterate over rough homes in nice order as specified
-    for ax in nice_order:
+    # iterate over rough homes in nice order; empirically-derived trajectories that nicely keep cables, etc.
+    for ax in ax_order:
         actual_rpy = move_to_rough_home(esp, ax)
-        module_logger.info('NOT YET IMPLEMENTED: Do gss for %s.' % ax)  # this will include data collect & write results
+        module_logger.info('NOT YET IMPLEMENTED: Do gss for %s.' % ax)  # gss will include data collect & write results
 
-    # move back to +x rough home for convenience
+
+    # lastly, move back to +x rough home for convenience
     module_logger.info('Finished calibration, so park at +x rough home.')
     actual_rpy = move_to_rough_home(esp, '+x')
 
+    # FIXME ESP's Axis class has an "off" method, so here we should turn off each axis
+    module_logger.info('NOT YET IMPLEMENTED: Powered off each ESP axis.')
+
 
 def run_cal():
-
-    from tshcal.tests.fake_esp import FakeESP  # faking ESP object to facilitate the demo code here
+    """a fake/placeholder for now"""
 
     # open communication with controller
     esp = FakeESP('/dev/ttyUSB0')

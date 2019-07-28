@@ -5,6 +5,7 @@ import numpy as np
 from collections import deque
 
 from tshcal.commanding.plot_progress import GoalProgressPlot
+from tshcal.constants_esp import TWO_RIG_AX_TO_MOVE
 
 # next 2 imports (I think) only in dummy calls
 from time import sleep
@@ -189,14 +190,7 @@ class GoldenSectionSearch(object):
                 break
 
 
-def demo():
-
-    # get info (mostly from parsing command line args)
-    rig_ax = 'pitch'       # decided by which TSH axis working on (need 2 such rig_ax for each TSH axis)
-    amin, amax = 150, 210  # if TSH +X, then e.g. pitch range (similar for other rig_ax range)
-    is_max = False         # if TSH +X, then True (-X: False, +Y, True, etc.)
-    want_to_plot = True    # to be parsed from command line args
-    debug_plot = False     # to be parsed from command line args
+def gss_single_rig_ax(rig_ax, amin, amax, is_max, want_to_plot, debug_plot):
 
     # if we want to plot, then need an object to handle plotting our points
     if want_to_plot:
@@ -223,4 +217,17 @@ def demo():
 
 
 if __name__ == '__main__':
-    demo()
+
+    # get info (from parsing command line args?)
+    want_to_plot = True
+    debug_plot = False
+
+    # for given rough home position, get the 2 rig axes/ranges to be moved in succession for finding min/max
+    rough_home = '+x'
+    two_rig_ax = TWO_RIG_AX_TO_MOVE[rough_home]
+
+    # iterate over the 2 rig axes to run gss for each
+    for rig_ax, amin, amax in two_rig_ax:
+        is_max = not rough_home.startswith('-')  # is_max = True if rough_home starts with minus sign in case + implied
+        print(rough_home, rig_ax, amin, amax, is_max, want_to_plot, debug_plot)
+        # gss_single_rig_ax(rig_ax, amin, amax, is_max, want_to_plot, debug_plot)

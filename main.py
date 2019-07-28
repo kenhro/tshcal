@@ -16,6 +16,7 @@ from tshcal.defaults import ROOT_DIR
 
 
 def get_logger(log_file):
+    """return logger object with both stream and file handlers, the latter using log_file"""
 
     # create logger
     logger = logging.getLogger('tshcal')
@@ -37,10 +38,12 @@ def get_logger(log_file):
     # add the handlers to the logger
     logger.addHandler(fh)
     logger.addHandler(ch)
+
     return logger
 
 
 def get_inputs(module_logger):
+    """return arguments parsed from command line and make log entries"""
 
     # parse arguments
     module_logger.debug('parsing input arguments')
@@ -65,7 +68,7 @@ def get_inputs(module_logger):
 
 
 def wait_for_start_time(s, mod_logger):
-    """delay until start time, s, has been surpassed"""
+    """delay until start time, s, has been surpassed; log via mod_logger"""
 
     # TODO make more user-friendly; e.g. prompt/update every 10sec with time remaining to start & a chance to abort
 
@@ -87,8 +90,9 @@ def wait_for_start_time(s, mod_logger):
 
 
 def get_tsh_buffer_summary():
+    """this does nothing beyond demonstrate instantiation of Tsh and TshAccelBuffer with logging"""
 
-    # FIXME significant parts of this function are for quick demo purposes only, so scrutinize and fix
+    # FIXME significant parts of this function are for quick demo purposes only, so scrub and fix
 
     # fake/dummy arguments for buffer creating
     sec = 1  # how many seconds-worth of TSH data (x,y,z acceleration values)
@@ -118,11 +122,12 @@ def get_tsh_buffer_summary():
 
 
 def main():
+    """return status/exit code that results from running main tshcal application"""
 
     # create logger
     log_file = os.path.join(ROOT_DIR, 'logging', 'tshcal.log')
     module_logger = get_logger(log_file)
-    module_logger.info('- STARTING MAIN TSHCAL APP - -')
+    module_logger.info('- STARTING MAIN TSHCAL APP - - - - - - - - - - - - - - - - - - - - - -')
     module_logger.debug('log_file = %s' % log_file)
 
     # get input arguments
@@ -146,23 +151,25 @@ def main():
 
     module_logger.info(summary)
 
-    # FIXME do we need to do anything prep/config for ESP here? (e.g. GENERAL MODE SELECTION or STATUS FUNCTIONS...
-    # FIXME ...maybe from Table 3.5.1 of ESP301 User Guide or possibly something else)?
+    # FIXME Do we need to do anything prep/config for ESP here? (e.g. GENERAL MODE SELECTION or STATUS FUNCTIONS...
+    # FIXME ...maybe from Table 3.5.1 of ESP301 User Guide or possibly something else)?  Will may have answered this?
 
-    # TODO before delay timer, prompt user with enough info here to enable go/no-go...
-    # TODO ... e.g. hit [Enter] if prompted profile looks good OR give user another keypress with chance to retry
+    # TODO Before delay timer, prompt user with enough info here to enable a go/no-go answer...
+    # TODO ... e.g. hit [Enter] if prompted-profile looks good OR give another keypress with chance to retry or...?
 
-    # FIXME flow chart shows 2 delays, but no smarts here yet to verify enough time for TSH temp. settling vs. start
+    # FIXME flow chart shows 2 delays, but no smarts here yet to verify enough time for TSH temperature settling
 
     # delay until start time to begin calibration
     wait_for_start_time(args.start, module_logger)
 
-    # call routine that does the calibration
+    # run calibration routine
     esp_commands.run_cal()
 
-    module_logger.info('- - - Calibration Complete - - - -')
+    # FIXME any commands we need to send to TSH at this point after running calibration?
 
-    return 0  # return zero for success, which is typical Linux command line behavior
+    module_logger.info('- - - Calibration Complete - - - - - - - - - - - - - - - - - - - - - -')
+
+    return 0  # return zero for success (typical Linux command line behavior)
 
 
 if __name__ == '__main__':

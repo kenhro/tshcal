@@ -81,5 +81,6 @@ class GoalProgressPlot(object):
         plt.pause(0.001)
 
     def debug_plot_point(self, x, y):
+        # FIXME mostly placeholder for now, maybe user prompts along the way (much verbosity, etc.)
         # TODO add verbosity for logging
         self.plot_point(x, y)

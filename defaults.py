@@ -40,3 +40,5 @@ ROUGH_HOMES = {
         '+z':  (0, -100,   0),
         '-z':  (0,   80,   0),
 }
+# empirically-derived order for rough homes transition trajectories so that cables and such are nicely kept
+NICE_ORDER = ['+x', '-z', '+y', '-x', '-y', '+z']  # this is order with which to visit each rough home pos
