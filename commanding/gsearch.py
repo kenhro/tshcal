@@ -6,15 +6,18 @@ from collections import deque
 
 from tshcal.commanding.plot_progress import GoalProgressPlot
 from tshcal.constants_esp import TWO_RIG_AX_TO_MOVE
+from tshcal.constants_tsh import TSH_SETTLE_SEC
+from tshcal.commanding.esp_commands import move_axis
 
 # next 2 imports (I think) only in dummy calls
 from time import sleep
 from math import cos, radians
 
 
-def dummy_move_to_get_counts(a):
+def dummy_move_to_get_counts(esp, ax, a):
     """This is a convenient/dummy function for mimicking cosine profile around min/max values."""
-    sleep(0.5)  # this to fake what should be allowed settling time (maybe 60 seconds?)
+    actual_pos = move_axis(esp, ax, a)
+    sleep(TSH_SETTLE_SEC)  # tsh settling time
     return 4_123_456 * cos(radians(a))
 
 

@@ -165,7 +165,7 @@ def main():
     # run calibration routine
     esp_commands.run_cal()
 
-    # FIXME any commands we need to send to TSH at this point after running calibration?
+    # FIXME are there any commands we need to send to TSH at this point after running calibration?
 
     module_logger.info('- - - Calibration Complete - - - - - - - - - - - - - - - - - - - - - -')
 

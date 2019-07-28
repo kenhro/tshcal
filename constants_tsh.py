@@ -41,3 +41,6 @@ TSH_GAINS = {
         25:  (1.0,   'Sensor test'),
         26:  (2.0,   'Sensor test'),
 }
+
+# amount of time to wait after a rig move to allow TSH to "settle"
+TSH_SETTLE_SEC = 1.5

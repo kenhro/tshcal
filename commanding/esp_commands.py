@@ -1,8 +1,9 @@
-#!/home/pims/PycharmProjects/tshcal/venv/bin/python
+#!/usr/bin/env python3
 
 import logging
 import operator
 import numpy as np
+from time import sleep
 from collections import deque
 from newportESP import ESP, Axis
 
@@ -37,7 +38,7 @@ def move_axis(esp, ax, pos):
 
 
 def move_to_rough_home_get_counts(esp, num, rhome, axpos):
-
+    """only used to show refactoring in cooking-show fashion"""
     module_logger.info('Go to calibration %s rough home (position %d of 6).' % (rhome, num))
     for ax, pos in axpos:
         actual_pos = move_axis(esp, ax, pos)
@@ -204,19 +205,19 @@ def calibration(esp, ax_order=NICE_ORDER):
     # iterate over rough homes in nice order; empirically-derived trajectories that nicely keep cables, etc.
     for ax in ax_order:
         actual_rpy = move_to_rough_home(esp, ax)
-        module_logger.info('NOT YET IMPLEMENTED: Do gss for %s.' % ax)  # gss will include data collect & write results
+        module_logger.info('NOT YET IMPLEMENTED: Do gss for %s.' % ax)  # gss includes data collect, tsh settle & writes
 
-
-    # lastly, move back to +x rough home for convenience
+    # move back to +x rough home for convenience
     module_logger.info('Finished calibration, so park at +x rough home.')
     actual_rpy = move_to_rough_home(esp, '+x')
 
-    # FIXME ESP's Axis class has an "off" method, so here we should turn off each axis
-    module_logger.info('NOT YET IMPLEMENTED: Powered off each ESP axis.')
+    # FIXME since ESP's Axis class has an "off" method, we should turn off each axis here
+    for rig_ax in range(1, 4):
+        module_logger.info('NOT YET IMPLEMENTED: Power off ESP axis #%d.' % rig_ax)
 
 
 def run_cal():
-    """a fake/placeholder for now"""
+    """a fake/placeholder for now, but actual will be fairly simple and probably alot like what's shown here"""
 
     # open communication with controller
     esp = FakeESP('/dev/ttyUSB0')
