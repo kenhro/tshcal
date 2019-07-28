@@ -10,12 +10,14 @@ from newportESP import ESP, Axis
 # FIXME refactor to use ESP instead of FakeESP
 from tshcal.tests.fake_esp import FakeESP  # faking ESP object to facilitate the demo code here
 from tshcal.defaults import ROUGH_HOMES, NICE_ORDER
+import tshcal.commanding.gsearch as gss
+
 
 # create logger
 module_logger = logging.getLogger('tshcal')
 
 
-def move_axis(esp, ax, pos):
+def move_axis(esp, ax, pos, settle=None):
     """return float for actual position after command to move esp axis, ax, to desired angle (in degrees), pos"""
 
     module_logger.info("Moving ESP axis = %d to pos = %.4f." % (ax, pos))
@@ -33,6 +35,10 @@ def move_axis(esp, ax, pos):
     module_logger.info("Done moving ESP axis = %d to ACTUAL pos = %.4f." % (ax, actual_pos))
 
     # TODO what should we do here if difference between actual and desired position is more than some small tolerance?
+
+    # pause if settle time (in seconds) is passed in
+    if settle:
+        module_logger.info('Pausing for %.1f seconds.' % settle)
 
     return actual_pos
 
@@ -206,6 +212,7 @@ def calibration(esp, ax_order=NICE_ORDER):
     for ax in ax_order:
         actual_rpy = move_to_rough_home(esp, ax)
         module_logger.info('NOT YET IMPLEMENTED: Do gss for %s.' % ax)  # gss includes data collect, tsh settle & writes
+        gss.demo_only()
 
     # move back to +x rough home for convenience
     module_logger.info('Finished calibration, so park at +x rough home.')

@@ -1,27 +1,32 @@
 #!/usr/bin/env python3
 
+import logging
 import operator
 import numpy as np
 from collections import deque
 
-from tshcal.commanding.plot_progress import GoalProgressPlot
+from tshcal.defaults import TSH_SETTLE_SEC
 from tshcal.constants_esp import TWO_RIG_AX_TO_MOVE
-from tshcal.constants_tsh import TSH_SETTLE_SEC
 from tshcal.commanding.esp_commands import move_axis
+from tshcal.commanding.plot_progress import GoalProgressPlot
+from tshcal.constants_esp import ESP_AX
 
 # next 2 imports (I think) only in dummy calls
 from time import sleep
 from math import cos, radians
 
 
+# create logger
+module_logger = logging.getLogger('tshcal')
+
+
 def dummy_move_to_get_counts(esp, ax, a):
     """This is a convenient/dummy function for mimicking cosine profile around min/max values."""
-    actual_pos = move_axis(esp, ax, a)
-    sleep(TSH_SETTLE_SEC)  # tsh settling time
+    actual_pos = move_axis(esp, ax, a, settle=TSH_SETTLE_SEC)
     return 4_123_456 * cos(radians(a))
 
 
-def move_rig_get_counts(ax, a, plot_fun=None):
+def move_rig_get_counts(esp, ax, a, plot_fun=None):
     """Move calibration rig axis to desired absolute angle (i.e. "move roll axis to 89.05 degrees").
 
     Parameters
@@ -49,11 +54,12 @@ def move_rig_get_counts(ax, a, plot_fun=None):
             ans = input("RIG AXIS = %s, ANGLE = %.3f deg...Type [enter] to step, or [x] exit: " % (ax, a))
             if ans == 'x':
                 raise Exception('User aborted RIG AXIS = %s, ANGLE = %.3f' % (ax, a))
-        counts = dummy_move_to_get_counts(a)
+        counts = dummy_move_to_get_counts(esp, ESP_AX[ax], a)
         plot_fun(a, counts)  # e.g. GoalProgressPlot.plot_point(x, y)
         return counts
     else:
-        return dummy_move_to_get_counts(a)
+        print(esp, ESP_AX[ax], a)
+        return dummy_move_to_get_counts(esp, ESP_AX[ax], a)
 
 
 class GoldenSectionSearch(object):
@@ -195,6 +201,11 @@ class GoldenSectionSearch(object):
 
 def gss_single_rig_ax(rig_ax, amin, amax, is_max, want_to_plot, debug_plot):
 
+    module_logger.info("Performing GSS for rig_ax = %s, amin = %.4f, amax = %.4f." % (rig_ax, amin, amax))
+
+    if amin < 1e6:
+        return
+
     # if we want to plot, then need an object to handle plotting our points
     if want_to_plot:
 
@@ -219,7 +230,7 @@ def gss_single_rig_ax(rig_ax, amin, amax, is_max, want_to_plot, debug_plot):
     gs.auto_run()
 
 
-if __name__ == '__main__':
+def demo_only():
 
     # get info (from parsing command line args?)
     want_to_plot = True
@@ -231,6 +242,11 @@ if __name__ == '__main__':
 
     # iterate over the 2 rig axes to run gss for each
     for rig_ax, amin, amax in two_rig_ax:
-        is_max = not rough_home.startswith('-')  # is_max = True if rough_home starts with minus sign in case + implied
-        print(rough_home, rig_ax, amin, amax, is_max, want_to_plot, debug_plot)
-        # gss_single_rig_ax(rig_ax, amin, amax, is_max, want_to_plot, debug_plot)
+        is_max = not rough_home.startswith('-')  # is_max = True if rough_home starts with minus sign
+        # print(rough_home, rig_ax, amin, amax, is_max, want_to_plot, debug_plot)
+        gss_single_rig_ax(rig_ax, amin, amax, is_max, want_to_plot, debug_plot)
+
+
+if __name__ == '__main__':
+
+    demo_only()

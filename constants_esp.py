@@ -9,3 +9,5 @@ TWO_RIG_AX_TO_MOVE = {
         '+z':   [('which',   0,   0), ('which',   0,    0)],
         '-z':   [('which',   0,   0), ('which',   0,    0)],
 }
+
+ESP_AX = {'x': 1, 'y': 2, 'z': 3}  # map axis letter to ESP axis (stage) number
