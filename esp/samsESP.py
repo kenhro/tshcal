@@ -89,7 +89,7 @@ def fake_move_to(p):
 def move_axis(esp, ax, pos):
     """return float for actual position after trying to move axis, ax, of esp object to desired pos, angle in degrees"""
 
-    # get reference to axis (aka stage here), and turn it on
+    # get reference to axis (aka stage), and turn it on
     stage = esp.axis(ax)
     stage.on()
 

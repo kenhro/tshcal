@@ -8,7 +8,7 @@ import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 
-from tshcal.secret import TSHES13_IPADDR
+from tshcal.secret import TSHES14_IPADDR
 from tshcal.filters.lowpass import ButterworthLowpassFilt
 from tshcal.common.tshes_params_packet import TshesMessage
 from tshcal.common.time_utils import unix_to_human_time
@@ -427,37 +427,12 @@ def ken_json_echo_client_example(ip_addr, port, json_data):
 def main():
     """some other testing may be appropriate here too, but try this for now"""
 
-    HOST = TSHES13_IPADDR  # string with es13's ip address
+    HOST = TSHES14_IPADDR  # string with tsh's ip address
     PORT = 9750  # port used by tsh to transmit accel. data
     # raw_data_from_socket(HOST, PORT)
-    fs, fc = 250.0, 10.0
+    fs, fc = 250.0, 100.0
     plot_raw_data_from_socket(fs, fc, 'y', HOST, PORT)
     sys.exit(-2)
-
-    # hit a simple echo server running on my pihole
-    HOST = STAN_IPADDR  # string with rpi server's ip address
-    PORT = 65432  # port being used for this service by the server
-    arr1 = ([1, 2, 3, 4, 5, 6], [11, 22, 33, 44, 55, 66])
-    arr2 = ([0.1, 0.2, 0.3, 0.4, 0.5], [1.1, 2.2, 3.3, 4.4, 5.5])
-    val3 = 'green_eggs'
-    d4 = datetime.datetime.now()  # JSON cannot serialize datetime...so need default=str keyword arg
-    d = dict()
-    d['a'] = arr1
-    d['b'] = arr2
-    d['c'] = val3
-    d['d'] = d4
-    d['e'] = 5
-    d['f'] = 6
-    d['g'] = 7
-    d['h'] = 8
-    d['i'] = 9
-    json_dumps_data = json.dumps(d, default=str)
-
-    print('Sending %d bytes' % sys.getsizeof(json_dumps_data))
-
-    num_bytes = ken_json_echo_client_example(HOST, PORT, json_dumps_data)
-
-    print('Received %d bytes' % num_bytes)
 
     return 0
 
