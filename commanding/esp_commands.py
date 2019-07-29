@@ -6,10 +6,11 @@ import numpy as np
 from time import sleep
 from collections import deque
 import matplotlib.pyplot as plt
-from newportESP import ESP, Axis
 
+from newportESP import ESP, Axis
 # FIXME refactor to use ESP instead of FakeESP
 from tshcal.tests.fake_esp import FakeESP  # faking ESP object to facilitate the demo code here
+
 from tshcal.defaults import ROUGH_HOMES, NICE_ORDER
 from tshcal.constants_esp import SAFE_TRAJ_MOVES
 from tshcal.constants_esp import TWO_RIG_AX_TO_MOVE
@@ -232,24 +233,6 @@ def move_axis(esp, ax, pos, settle=None):
     return actual_pos
 
 
-def move_to_rough_home_do_gss(esp, rhome, axpos):
-    """move to rough home, rhome, via (ax, pos) values in axpos tuple"""
-
-    module_logger.info('Go to rough home %s for calibration.' % rhome)
-
-    # iterate over sequence listed in axpos (ax, moves) tuple
-    for ax, pos in axpos:
-        actual_pos = move_axis(esp, ax, pos)
-
-    # currently at rough home, rhome
-
-    # do gss for each of two "other" axes when at this rough home position, rhome
-    module_logger.info('NOT YET IMPLEMENTED: Do gss for %s.' % rhome)  # gss to do data collect, tsh settle & writes
-    #gss_two_axes(esp, rhome)
-
-    # data collection for rhome
-
-
 def move_to_rough_home(esp, rig_ax):
     """Move calibration rig to desired rough home position (i.e. "move to TSH +X UP or TSH -Y UP, etc.").
 
@@ -277,6 +260,24 @@ def move_to_rough_home(esp, rig_ax):
                        (rig_ax, actual_roll, actual_pitch, actual_yaw))
 
     return actual_roll, actual_pitch, actual_yaw
+
+
+def move_to_rough_home_do_gss(esp, rhome, axpos):
+    """move to rough home, rhome, via (ax, pos) values in axpos tuple"""
+
+    module_logger.info('Go to rough home %s for calibration.' % rhome)
+
+    # iterate over sequence listed in axpos (ax, moves) tuple
+    for ax, pos in axpos:
+        actual_pos = move_axis(esp, ax, pos)
+
+    # currently at rough home, rhome
+
+    # do gss for each of two "other" axes when at this rough home position, rhome
+    module_logger.info('NOT YET IMPLEMENTED: Do gss for %s.' % rhome)  # gss to do data collect, tsh settle & writes
+    #gss_two_axes(esp, rhome)
+
+    # data collection for rhome
 
 
 # TODO compare what we had as a rough draft of prototype_routine to refact2 function below
@@ -334,7 +335,7 @@ def prototype_routine(m):
     # data collection
 
 
-# TODO compare refact2 function to what we had for rough draft prototype_routine above & to refact3 routine below
+# TODO compare refact2 function to what we had for rough draft prototype_routine above & see refact3 routine below
 def refact2(esp):
 
     module_logger.info('Go to calibration +x rough home (position 1 of 6).')
@@ -379,7 +380,7 @@ def refact2(esp):
     module_logger.info('Finished calibration, so park at +x rough home.')
 
 
-# TODO compare this refact3 function to refact2 routine above
+# TODO compare this refact3 function to refact2 routine above as another step toward finalizing in calibration below
 def refact3(esp):
 
     # TODO note we are only doing safe moves, so we only make minimal adjustments...
@@ -388,19 +389,25 @@ def refact3(esp):
     # we assume rig starting in home position, so moves below get us from rough home to rough home safely
 
     move_to_rough_home_do_gss(esp, '+x', [(2, 0)])
+    move_to_rough_home(esp, '+x')
 
     move_to_rough_home_do_gss(esp, '-z', [(2, 80)])
+    move_to_rough_home(esp, '-z')
 
     move_to_rough_home_do_gss(esp, '+y', [(3, -90)])
+    move_to_rough_home(esp, '+y')
 
     move_to_rough_home_do_gss(esp, '-x', [(2, 170)])
+    move_to_rough_home(esp, '-x')
 
     move_to_rough_home_do_gss(esp, '-y', [(2, -100), (3, -90)])
+    move_to_rough_home(esp, '-y')
 
     move_to_rough_home_do_gss(esp, '+z', [(3, 0)])
+    move_to_rough_home(esp, '+z')
 
     # move back to +x rough home for convenience
-    actual_pos = move_axis(esp, 2, 0)
+    move_to_rough_home(esp, '+x')
     module_logger.info('Finished calibration, so park at +x rough home.')
 
 
@@ -410,20 +417,33 @@ def calibration(esp, safe_moves=SAFE_TRAJ_MOVES):
 
     # iterate over rough homes for cal in safe manner; empirically-derived trajectories that nicely keep cables, etc.
     for rhome, moves in safe_moves:
-        move_to_rough_home_do_gss(esp, rhome, moves)
+        move_to_rough_home_do_gss(esp, rhome, moves)  # does min/max search and writes results
+        move_to_rough_home(esp, rhome)  # zeros some positions to get clean on all 3 rig axes (stages) for next move
 
     # move back to +x rough home for convenience
     module_logger.info('Finished calibration, so park at +x rough home.')
-    actual_rpy = move_to_rough_home(esp, '+x')
+    move_to_rough_home(esp, '+x')
 
-    # FIXME since ESP's Axis class has an "off" method, we should turn off each axis here
-    for rig_ax in range(1, 4):
-        module_logger.info('NOT YET IMPLEMENTED: Power off ESP axis #%d.' % rig_ax)
+    # since axis object (an attribute of esp) has an "off" method, we should turn off each axis here
+    for iax in range(1, 4):
+        esp.axis(iax).off()
+        module_logger.info('Powered off ESP axis #%d.' % iax)
 
 
-def move_and_get_counts(esp, ax, a):
-    """move rig_ax to angle, a, then return average counts"""
-    actual_pos = move_axis(esp, ax, a, settle=TSH_SETTLE_SEC)
+def get_tsh_counts(tsh):
+    """Fill buffer with TSH data, compute mean and return 1x3 array for TSH x-, y- and z-axis.
+
+    Parameters
+    ----------
+    tsh : obj
+        The TSH "data source" object.
+
+    Returns
+    -------
+    counts: 1x3 array of floats
+        The mean value for each of TSH x-, y- and z-axis.
+
+    """
 
     HOST = TSHES14_IPADDR  # string with tsh's ip address
     PORT = 9750  # port used by tsh to transmit accel. data
@@ -441,11 +461,16 @@ def move_and_get_counts(esp, ax, a):
     return np.mean(tsh_buff.xyz, axis=0)
 
 
-def move_rig_get_counts(esp, ax, a, plot_obj=None, debug=False):
-    """Move calibration rig axis to desired absolute angle (i.e. "move roll axis to 89.05 degrees").
+def move_rig_get_counts(esp, tsh, ax, a, plot_obj=None, debug=False):
+    """Move esp calibration rig's axis, ax, to desired absolute angle, a (i.e. "move roll axis to 89.05 degrees") and
+    return average counts after TSH settles at that position.
 
     Parameters
     ----------
+    esp : obj
+        The ESP motion controller object.
+    tsh : obj
+        The TSH "data source" object.
     ax : str
         The rig axis to be moved: 'yaw', 'pitch', or 'roll'.
     a: float
@@ -460,28 +485,36 @@ def move_rig_get_counts(esp, ax, a, plot_obj=None, debug=False):
 
     Returns
     -------
-    counts
+    counts: 1x3 array of floats
+        The mean value for each of TSH x-, y- and z-axis.
 
     """
+    if debug:
+        ans = input("MOVE RIG AXIS = %s TO ANGLE = %.3f deg?...Type [enter] for Yes, or [x] exit: " % (ax, a))
+        module_logger.info('User hit enter.')
+        if ans == 'x':
+            module_logger.info('User aborted RIG AXIS = %s, ANGLE = %.3f' % (ax, a))
+            raise Exception('User aborted RIG AXIS = %s, ANGLE = %.3f' % (ax, a))
+
+    # move rig
+    actual_pos = move_axis(esp, ESP_AX[ax], a, settle=TSH_SETTLE_SEC)
+
+    # get counts
+    avg_counts = get_tsh_counts(tsh)
+
+    # FIXME we want a particular element of avg_counts (not all 3 components)
+    # send (x, y) = (angle, counts) to plot this point
     if plot_obj:
-        if debug:
-            ans = input("MOVE RIG AXIS = %s TO ANGLE = %.3f deg?...Type [enter] for Yes, or [x] exit: " % (ax, a))
-            module_logger.info('User hit enter.')
-            if ans == 'x':
-                module_logger.info('User aborted RIG AXIS = %s, ANGLE = %.3f' % (ax, a))
-                raise Exception('User aborted RIG AXIS = %s, ANGLE = %.3f' % (ax, a))
-        avg_counts = move_and_get_counts(esp, ESP_AX[ax], a)
         plot_obj.plot_point(a, avg_counts)  # e.g. GoalProgressPlot.plot_point(x, y)
-        return avg_counts
-    else:
-        return move_and_get_counts(esp, ESP_AX[ax], a)
+
+    return avg_counts
 
 
 def run_cal():
-    """a fake/placeholder for now, but actual will be fairly simple and probably alot like what's shown here"""
+    """a fake/placeholder for now, but actual code will be fairly simple and probably alot like what's shown here"""
 
     # open communication with controller
-    esp = ESP('/dev/ttyUSB0')
+    esp = FakeESP('/dev/ttyUSB0')
 
     # run calibration routine
     #calibration(esp)
