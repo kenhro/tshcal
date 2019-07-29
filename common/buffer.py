@@ -1,11 +1,74 @@
 #!/usr/bin/env python3
 
 import re
+import socket
+import struct
 import numpy as np
 import logging
 
+from tshcal.common.time_utils import unix_to_human_time
+from tshcal.defaults import TSH_BUFFER_SEC
+from tshcal.common.tshes_params_packet import TshesMessage
+from tshcal.constants_tsh import TSH_RATES, TSH_GAINS, TSH_UNITS
+
+
 # create logger
 module_logger = logging.getLogger('tshcal')
+
+
+def divvy_up(num, divisor=16):
+    """return tuple with 2 values: floor(num/divisor) and num%divisor
+    :param num: integer number of values
+    :param divisor: integer divisor, e.g. number of bytes in each record (default is 16)
+    :return: a tuple with 2 values: floor(num/divisor) and num%divisor
+    """
+    return int(np.floor(num/divisor)), num % divisor
+
+
+def recvall(sock, n):
+    """helper function to receive n bytes from (sock)et or return None if EOF is hit"""
+    data = b''
+    while len(data) < n:
+        packet = sock.recv(n - len(data))
+        if not packet:
+            return None
+        data += packet
+    return data
+
+
+def get_buff_header():
+    """something to keep things straight for raw data from socket deal"""
+    s = [
+    'recv',
+    'seqnum',
+    'sync',
+    'msiz',
+    'cksum',
+    ' source',
+    'destin',
+    'sel',
+    'dsiz',
+    ' tsh',
+    '   counter',
+    (18 * ' ') + 'start',
+    'pstat',
+    'num',
+    'fsrate',
+    'cutoff',
+    'gain',
+    ' input',
+    '  unit',
+    '     adjustment',
+    (20 * ' ') + 'end',
+    'rec',
+    'LOB',
+    'def',
+    'need']
+    return ' '.join(s)
+
+
+def print_header():
+    print(get_buff_header())
 
 
 class Tsh(object):
@@ -15,6 +78,8 @@ class Tsh(object):
         self.name = name  # i.e. tsh_id (e.g. tshes-13)
         self.rate = rate  # sample rate in sa/sec
         self.gain = gain  # gain [code?]  # FIXME figure out if we want code or actual gain value here [probably code!]
+        module_logger.warning("Instantiated %s object but it does not really (yet) do any get/set with TSH commands."
+                              % self.__class__.__name__)
 
     def __str__(self):
         s = '%s, ' % self.name
@@ -74,7 +139,7 @@ class TshAccelBuffer(object):
             self.xyz[self.idx:self.idx + offset, :] = more[0:offset, :]
             self.logger.debug('Buffer added %d xyz records.' % offset)
             self.is_full = True
-            self.logger.warning('Buffer now full, stop adding, array shape is %s.' % str(self.xyz.shape))
+            self.logger.warning('Buffer now full, so stop adding already, the array shape is %s.' % str(self.xyz.shape))
         else:
             self.xyz[self.idx:self.idx + offset, :] = more
             self.logger.debug('Buffer added %d xyz records.' % offset)
@@ -83,17 +148,156 @@ class TshAccelBuffer(object):
         self.idx = self.idx + offset
 
 
+def raw_data_from_socket(ip_addr, buff, port=9750):
+    """establish socket connection to [tsh] (ip_addr)ess on data port (9750) and show pertinent data"""
+
+    # crude attempt at identifying columns in log entriess
+    module_logger.info(get_buff_header())
+
+    previous_count = -1
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.connect((ip_addr, port))
+        while not buff.is_full:
+            data = s.recv(8192)  # FIXME power of 2 is recommended, but not sure what optimum value to use here
+            if data:
+                if len(data) >= 16:  # FIXME Why 80 in Ted's code [maybe it was MySQL db goodness?]; MAYBE > ZERO??
+
+                    # get selector value
+                    byte2 = struct.unpack('c', bytes([data[40]]))[0]
+                    byte3 = struct.unpack('c', bytes([data[41]]))[0]
+                    selector = ord(byte2) * 256 + ord(byte3)
+
+                    # make sure we have selector that corresponds to a TshesAccelPacket; either real-time or replay
+                    accel_pkt = (selector == 170) or (selector == 171)
+                    if accel_pkt:
+
+                        # examine structure before "Data" payload (TshesAccelPacket), starts @ byte 44 of tshes message
+                        tm = TshesMessage(data)
+                        # tm.enum_bytes()
+
+                        # --- NOW HERE WE TRANSITION TO TshesAccelPacket ---
+
+                        # tsh identifier
+                        tshes_id = data[44:60]
+                        tshes_id = tshes_id.replace(b'-', b'').replace(b'\0', b'')  # delete dashes and nulls
+                        tshes_id = tshes_id[-4:]  # keep last 4 characters only, i.e., "es13"
+
+                        # counter
+                        counter = struct.unpack('!I', data[60:64])[0]  # Network byte order
+
+                        # let's throw in a line with dashes near counter column when we detect one or more missing count
+                        if counter - previous_count != 1:
+                            module_logger.info(' '*60 + '-'*7)
+                        previous_count = counter
+
+                        # timestamp
+                        sec, usec = struct.unpack('!II', data[64:72])  # Network byte order
+                        timestamp = sec + usec / 1000000.0
+
+                        # packet_status
+                        packet_status = struct.unpack('!i', data[72:76])[0]  # Network byte order
+
+                        # number of samples
+                        num_samples = struct.unpack('!i', data[76:80])[0]  # Network byte order
+
+                        # get rate and cutoff_freq from packet status
+                        rate_bits = (packet_status & 0x0f00) >> 8
+                        rate, cutoff_freq = TSH_RATES[rate_bits]
+
+                        # get gain and input from packet status
+                        gain_bits = packet_status & 0x001f
+                        gain, inp = TSH_GAINS[gain_bits]
+
+                        # get unit from packet status
+                        unit_bits = (packet_status & 0x0060) >> 5
+                        unit = TSH_UNITS[unit_bits]
+
+                        # get adjustment from packet status
+                        adj_bits = (packet_status & 0x0080) >> 7
+                        adjustment = 'no-compensation'
+                        if adj_bits == 1:
+                            adjustment = 'temperature-compensation'
+
+                        # compute end time from start, number of samples and rate
+                        end_time = timestamp + (num_samples - 1) / rate
+
+                        # build array of accel data
+                        xyz = []
+
+                        # compute delta samples missing from current volley of bytes; 1 sample = 16 bytes (x,y,z,dio)
+                        received_samples, left_over_bytes = divvy_up(len(data[80:]))
+                        deficit_samples = num_samples - received_samples
+                        deficit_bytes = deficit_samples * 16 - left_over_bytes
+
+                        # append the samples we have received so far
+                        for i in range(received_samples):
+                            start = 80 + 16 * i
+                            stop = start + 16
+                            x, y, z, dio = struct.unpack('!fffI', data[start:stop])  # Network byte order
+                            # we are ignoring digital io status (dio)
+                            # self.handleDigitalIOstatus(digitalIOstatus, i)
+                            # if convert:
+                            #     x, y, z = x * mx + bx, y * my + by, z * mz + bz
+                            xyz.append((x, y, z))
+
+                        # NOTE: This next bit of code shows we now know we're dealing with stream-based protocol!
+
+                        # keep remainder bytes & prepend'em to balance of samples we'll get for TshesAccelPacket struct
+                        more_data = data[stop:]
+                        more_data += recvall(s, deficit_bytes)  # remainder of bytes we need to get num_samples filled
+
+                        # append deficit samples to get a total of num_samples (promised in TshesAccelPacket's "Prefix")
+                        for i in range(deficit_samples):
+                            start = 16 * i
+                            stop = start + 16
+                            x, y, z, dio = struct.unpack('!fffI', more_data[start:stop])  # Network byte order
+                            xyz.append((x, y, z))
+
+                        module_logger.info("{:>4} {} {:>4s} {:>10d} {} {:>5d} {:>3d} {:>6.1f} {:>6.2f} {:>4.1f} {:>6s}"
+                              " {:>6s} {:>15s} {} {:>3d} {:>3d} {:>3d} {:>4d}".format(
+                            len(data),
+                            str(tm).replace('\n', ' '),
+                            tshes_id.decode('utf-8'),
+                            counter,
+                            unix_to_human_time(timestamp),
+                            packet_status,
+                            num_samples,
+                            rate,
+                            cutoff_freq,
+                            gain,
+                            inp,
+                            unit,
+                            adjustment,
+                            unix_to_human_time(end_time),
+                            received_samples,
+                            left_over_bytes,
+                            deficit_samples,
+                            stop - left_over_bytes)
+                        )
+
+                        buff.add(np.array(xyz))
+
+                else:
+                    print('unhandled branch with len(data) = %d' % len(data))
+
+            else:
+                break
+
+
 def demo_buffer():
 
     import os
     import platform
 
-    # fake/dummy arguments for buffer creationg
-    sec = 1  # how many seconds-worth of TSH data (x,y,z acceleration values)
-    fs, k = 9.0, 0  # fake/dummy arguments for sample rate and gain
+    # fake/dummy arguments for buffer creation
+    sec = TSH_BUFFER_SEC  # how many seconds-worth of TSH data (x,y,z acceleration values)
+    fs, k = 250.0, 0  # fake/dummy arguments for sample rate and gain
+
+    module_logger.warning('ASSUMING the TSH is configured (sample rate, gain, and so on).')
 
     # create data buffer -- at some pt in code before we need mean(counts), probably just after GSS min/max found
-    tsh = Tsh('tshes-44', fs, k)
+    tsh = Tsh('tshes-14', fs, k)
     buffer = TshAccelBuffer(tsh, sec)
 
     # add some data to buffer (note shape is Nx3, with 3 columns for xyz)
@@ -123,6 +327,29 @@ def demo_buffer():
     buffer.write_raw(npy_file)
 
 
+def demo_proto():
+
+    from tshcal.secret import TSHES14_IPADDR
+
+    HOST = TSHES14_IPADDR  # string with tsh's ip address
+    PORT = 9750  # port used by tsh to transmit accel. data
+
+    # fake/dummy arguments for buffer creation
+    sec = TSH_BUFFER_SEC  # how many seconds-worth of TSH data (x,y,z acceleration values)
+    fs, k = 250.0, 0  # fake/dummy arguments for sample rate and gain
+
+    module_logger.warning('ASSUMING the TSH is configured (sample rate, gain, and so on).')
+
+    # create data buffer -- at some pt in code before we need mean(counts), probably just after GSS min/max found
+    tsh = Tsh('tshes-14', fs, k)
+    tsh_buff = TshAccelBuffer(tsh, sec, logger=module_logger)
+    raw_data_from_socket(HOST, tsh_buff, port=PORT)
+
+    print(tsh_buff.xyz)
+
+    raise SystemExit
+
+
 if __name__ == '__main__':
 
-    demo_buffer()
+    demo_proto()

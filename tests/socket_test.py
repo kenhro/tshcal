@@ -5,16 +5,23 @@ import json
 import struct
 import socket
 import datetime
+import logging
 import numpy as np
 import matplotlib.pyplot as plt
 
-from tshcal.secret import TSHES13_IPADDR
+from tshcal.secret import TSHES14_IPADDR
 from tshcal.filters.lowpass import ButterworthLowpassFilt
 from tshcal.common.tshes_params_packet import TshesMessage
 from tshcal.common.time_utils import unix_to_human_time
 from tshcal.common.plot_utils import TshRealtimePlot
+from tshcal.common.buffer import TshAccelBuffer, Tsh
 from tshcal.common.sci_utils import is_outlier
 from tshcal.constants_tsh import TSH_RATES, TSH_GAINS, TSH_UNITS
+from tshcal.defaults import TSH_BUFFER_SEC
+
+
+# create logger
+module_logger = logging.getLogger('tshcal')
 
 
 def eric_example(ip_addr, port=9750):
@@ -85,7 +92,7 @@ def print_header():
     print(' '.join(s))
 
 
-def raw_data_from_socket(ip_addr, bytes_ctr, port=9750):
+def raw_data_from_socket(ip_addr, buff, port=9750):
     """establish socket connection to [tsh] (ip_addr)ess on data port (9750) and show pertinent data"""
 
     print_header()
@@ -93,7 +100,7 @@ def raw_data_from_socket(ip_addr, bytes_ctr, port=9750):
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((ip_addr, port))
-        while True:
+        while not buff.is_full:
             data = s.recv(8192)  # FIXME power of 2 is recommended, but not sure what optimum value to use here
             if data:
                 if len(data) >= 16:  # FIXME Why 80 in Ted's code [maybe it was MySQL db goodness?]; MAYBE > ZERO??
@@ -213,9 +220,10 @@ def raw_data_from_socket(ip_addr, bytes_ctr, port=9750):
                             received_samples,
                             left_over_bytes,
                             deficit_samples,
-                            stop - left_over_bytes
+                            stop - left_over_bytes)
                         )
-                        )
+
+                        buff.add(np.array(xyz))
 
                 else:
                     print('unhandled branch with len(data) = %d' % len(data))
@@ -427,9 +435,24 @@ def ken_json_echo_client_example(ip_addr, port, json_data):
 def main():
     """some other testing may be appropriate here too, but try this for now"""
 
-    HOST = TSHES13_IPADDR  # string with es13's ip address
+    HOST = TSHES14_IPADDR  # string with tsh's ip address
     PORT = 9750  # port used by tsh to transmit accel. data
-    # raw_data_from_socket(HOST, PORT)
+
+    # fake/dummy arguments for buffer creation
+    sec = 10  # TSH_BUFFER_SEC  # how many seconds-worth of TSH data (x,y,z acceleration values)
+    fs, k = 250.0, 0  # fake/dummy arguments for sample rate and gain
+
+    module_logger.warning('ASSUMING the TSH is configured (sample rate, gain, and so on).')
+
+    # create data buffer -- at some pt in code before we need mean(counts), probably just after GSS min/max found
+    tsh = Tsh('tshes-14', fs, k)
+    tsh_buff = TshAccelBuffer(tsh, sec, logger=module_logger)
+    raw_data_from_socket(HOST, tsh_buff, port=PORT)
+
+    print(tsh_buff.xyz)
+
+    raise SystemExit
+
     fs, fc = 250.0, 10.0
     plot_raw_data_from_socket(fs, fc, 'y', HOST, PORT)
     sys.exit(-2)

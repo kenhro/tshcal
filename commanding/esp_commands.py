@@ -15,8 +15,9 @@ from tshcal.constants_esp import SAFE_TRAJ_MOVES
 from tshcal.constants_esp import TWO_RIG_AX_TO_MOVE
 from tshcal.commanding.plot_progress import GoalProgressPlot
 from tshcal.constants_esp import ESP_AX
-from tshcal.defaults import TSH_SETTLE_SEC
-
+from tshcal.defaults import TSH_SETTLE_SEC, TSH_BUFFER_SEC
+from tshcal.common import buffer
+from tshcal.secret import TSHES14_IPADDR
 
 # create logger
 module_logger = logging.getLogger('tshcal')
@@ -232,7 +233,7 @@ def move_axis(esp, ax, pos, settle=None):
 
 
 def move_to_rough_home_do_gss(esp, rhome, axpos):
-    """show refactoring in cooking-show fashion"""
+    """move to rough home, rhome, via (ax, pos) values in axpos tuple"""
 
     module_logger.info('Go to rough home %s for calibration.' % rhome)
 
@@ -243,11 +244,10 @@ def move_to_rough_home_do_gss(esp, rhome, axpos):
     # currently at rough home, rhome
 
     # do gss for each of two "other" axes when at this rough home position, rhome
-    gss_two_axes(esp, rhome)
+    module_logger.info('NOT YET IMPLEMENTED: Do gss for %s.' % rhome)  # gss to do data collect, tsh settle & writes
+    #gss_two_axes(esp, rhome)
 
     # data collection for rhome
-
-    module_logger.info('NOT YET IMPLEMENTED: Do gss for %s.' % rhome)  # gss to do data collect, tsh settle & writes
 
 
 def move_to_rough_home(esp, rig_ax):
@@ -421,13 +421,24 @@ def calibration(esp, safe_moves=SAFE_TRAJ_MOVES):
         module_logger.info('NOT YET IMPLEMENTED: Power off ESP axis #%d.' % rig_ax)
 
 
-def dummy_move_to_get_counts(esp, ax, a):
-    """This is a convenient/dummy function for mimicking cosine profile around min/max values."""
-    from math import cos, radians
+def move_and_get_counts(esp, ax, a):
+    """move rig_ax to angle, a, then return average counts"""
     actual_pos = move_axis(esp, ax, a, settle=TSH_SETTLE_SEC)
 
-    # FIXME this is where'd we collect averaged counts for specified TSH axis
-    return 4_123_456 * cos(radians(a))
+    HOST = TSHES14_IPADDR  # string with tsh's ip address
+    PORT = 9750  # port used by tsh to transmit accel. data
+    fs, k = 250.0, 0  # fake/dummy arguments for sample rate and gain
+
+    # create buffer
+    sec = TSH_BUFFER_SEC  # how many seconds-worth of TSH data (x,y,z acceleration values)
+    module_logger.warning('ASSUMING the TSH is configured (sample rate, gain, and so on).')
+
+    # create data buffer -- at some pt in code before we need mean(counts), probably just after GSS min/max found
+    tsh = buffer.Tsh('tshes-14', fs, k)
+    tsh_buff = buffer.TshAccelBuffer(tsh, sec, logger=module_logger)
+    buffer.raw_data_from_socket(HOST, tsh_buff, port=PORT)
+
+    return np.mean(tsh_buff.xyz, axis=0)
 
 
 def move_rig_get_counts(esp, ax, a, plot_obj=None, debug=False):
@@ -452,7 +463,6 @@ def move_rig_get_counts(esp, ax, a, plot_obj=None, debug=False):
     counts
 
     """
-    # TODO replace dummy call with actual rig control code
     if plot_obj:
         if debug:
             ans = input("MOVE RIG AXIS = %s TO ANGLE = %.3f deg?...Type [enter] for Yes, or [x] exit: " % (ax, a))
@@ -460,21 +470,26 @@ def move_rig_get_counts(esp, ax, a, plot_obj=None, debug=False):
             if ans == 'x':
                 module_logger.info('User aborted RIG AXIS = %s, ANGLE = %.3f' % (ax, a))
                 raise Exception('User aborted RIG AXIS = %s, ANGLE = %.3f' % (ax, a))
-        counts = dummy_move_to_get_counts(esp, ESP_AX[ax], a)
-        plot_obj.plot_point(a, counts)  # e.g. GoalProgressPlot.plot_point(x, y)
-        return counts
+        avg_counts = move_and_get_counts(esp, ESP_AX[ax], a)
+        plot_obj.plot_point(a, avg_counts)  # e.g. GoalProgressPlot.plot_point(x, y)
+        return avg_counts
     else:
-        return dummy_move_to_get_counts(esp, ESP_AX[ax], a)
+        return move_and_get_counts(esp, ESP_AX[ax], a)
 
 
 def run_cal():
     """a fake/placeholder for now, but actual will be fairly simple and probably alot like what's shown here"""
 
     # open communication with controller
-    esp = FakeESP('/dev/ttyUSB0')
+    esp = ESP('/dev/ttyUSB0')
 
     # run calibration routine
-    calibration(esp)
+    #calibration(esp)
+
+    rig_ax = 1
+    angle = 2
+    avg_counts = move_and_get_counts(esp, rig_ax, angle)
+    module_logger.debug('avg_counts: x = {}, y = {}, z = {}'.format(*avg_counts))
 
 
 if __name__ == '__main__':
