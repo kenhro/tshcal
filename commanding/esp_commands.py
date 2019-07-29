@@ -10,11 +10,197 @@ from newportESP import ESP, Axis
 # FIXME refactor to use ESP instead of FakeESP
 from tshcal.tests.fake_esp import FakeESP  # faking ESP object to facilitate the demo code here
 from tshcal.defaults import ROUGH_HOMES, NICE_ORDER
-import tshcal.commanding.gsearch as gss
+from tshcal.constants_esp import SAFE_TRAJ_MOVES
+from tshcal.constants_esp import TWO_RIG_AX_TO_MOVE
+from tshcal.commanding.plot_progress import GoalProgressPlot
+from tshcal.constants_esp import ESP_AX
+from tshcal.defaults import TSH_SETTLE_SEC
 
 
 # create logger
 module_logger = logging.getLogger('tshcal')
+
+
+class GoldenSectionSearch(object):
+    """
+    A class used for golden section search to find min/max within the interval (a, b).
+
+    see https://en.wikipedia.org/wiki/Golden-section_search
+
+    """
+
+    golden_ratio = (1 + np.sqrt(5)) / 2
+
+    def __init__(self, esp, a, b, rig_ax, max=True, plot=None):
+        """
+        Parameters
+        ----------
+        :param esp: Newport ESP motion controller object.
+        :param a: Initial float value for smallest angle in interval being searched.
+        :param b: Initial float value for largest angle in interval being searched.
+        :param rig_ax: String for which rig axis is being controlled and used to search ('yaw', 'pitch' or 'roll')
+        :param max: Boolean True to find max; otherwise, find min.
+        :param plot: None for no plotting or an object with these methods:
+                     plot_point or debug_plot_point
+        """
+        self.esp = esp
+        self._a = a
+        self._b = b
+        self.rig_ax = self._set_ax(rig_ax)
+        self.width = b - a
+        self.mean = np.mean([a, b])
+        self._max = max  # True to find max, False to find min
+        self.plot = plot  # None for no plot; otherwise object with prescribed methods
+        self._buffer = None
+        self._c = b - self.width / self.golden_ratio
+        self._d = a + self.width / self.golden_ratio
+        self._ginterval = deque(maxlen=4)
+        self.current_angle = None
+
+    def _set_ax(self, rax):
+        """
+        Validate and set attribute for rig axis.
+
+        :param rax: String for rig axis ('roll', 'pitch' or 'yaw')
+        :return: String (that was validated)
+        """
+        if rax in ['roll', 'pitch', 'yaw']:
+            return rax
+        else:
+            raise ValueError("invalid input ax ('%s') must be: 'roll', 'pitch' or 'yaw'" % rax)
+
+    def four_initial_moves(self):
+        """
+        For each of 4 angle values in interval, get corresponding counts.
+
+        :return: None
+        """
+        # we defer this initialization for interval because calls here will MOVE THE RIG!
+
+        # create first 4 pts for interval
+        self._ginterval.append((self._a, move_rig_get_counts(self.esp, self.rig_ax, self._a, self.plot)))
+        self._ginterval.append((self._c, move_rig_get_counts(self.esp, self.rig_ax, self._c, self.plot)))
+        self._ginterval.append((self._d, move_rig_get_counts(self.esp, self.rig_ax, self._d, self.plot)))
+        self._ginterval.append((self._b, move_rig_get_counts(self.esp, self.rig_ax, self._b, self.plot)))
+
+    def __str__(self):
+        s = 'GSS(max)' if self._max else 'GSS(min)'
+        # 3 digits after decimal pt for angle; 9 for cosine (dummy) value since not yet working with counts
+        for tup in zip(['a', 'c', 'd', 'b'], self._ginterval):
+            s += '  ' + str(tup[0]) + ': '
+            s += '{:8.3f}, {:12.9f}'.format(*tup[1])
+        s += '  w:{:6.2f}'.format(self.width)  # width of overall interval in degrees
+        s += '  m:{:6.2f}'.format(self.mean)   # midpoint of overall interval in degrees
+        return s
+
+    def get_interval(self):
+        return list(self._ginterval)
+
+    def update_interval(self):
+        """
+        Refine interval based on middle-two counts & whether searching for min or max.
+        :return: None
+        """
+
+        # establish operator used for comparison based on whether we are searching for min or max
+        if self._max:
+            op = operator.ge  # comparison operator to find max is "greater than or equal to (ge)", >=
+        else:
+            op = operator.lt  # comparison operator to find min is "less than (lt)", <
+
+        # get function values (actually, it's counts) at the 2 inner points in the interval
+        fc = self._ginterval[1][1]
+        fd = self._ginterval[2][1]
+
+        # compare values at 2 inner points in interval
+        if op(fc, fd):
+
+            # shift d2b & c2d, keep a, new c                        # a c d b << initial order
+            self._ginterval.rotate()                                # b a c d << d2b & c2d
+            self._ginterval[0] = self._ginterval[1]                 # a a c d << keep a
+
+            # now recompute 2nd element
+            b = self._ginterval[-1][0]
+            a = self._ginterval[0][0]
+            c = b - (b - a) / self.golden_ratio
+            new_point = (c, move_rig_get_counts(self.esp, self.rig_ax, c, self.plot))
+            self._ginterval[1] = new_point                          # a N c d << N is the only new pt
+
+        else:
+
+            # shift c2a & d2c, keep b, new d                        # a c d b << initial order
+            self._ginterval.rotate(-1)                              # c d b a << c2a & d2c
+            self._ginterval[-1] = self._ginterval[-2]               # c d b b << keep b
+
+            # now recompute 3rd element
+            b = self._ginterval[-1][0]
+            a = self._ginterval[0][0]
+            d = a + (b - a) / self.golden_ratio
+            new_point = (d, move_rig_get_counts(self.esp, self.rig_ax, d, self.plot))
+            self._ginterval[2] = new_point                          # c d N b << N is the only new pt
+
+        # recompute width and mean value
+        self.width = (b - a)
+        self.mean = np.mean([a, b])
+
+    def auto_run(self, min_width=0.1, max_iters=25):
+        """
+        Automatically run with calls to update_section, but stop when width < min_width or iterations > max_iters,
+        whichever comes first.
+
+        :param min_width: Float minimum value below which the auto_run method stops (default = 0.1 degrees).
+        :param max_iters: Integer maximum number of iterations above which auto_run method stops (default = 25).
+        :return: None
+        """
+        for i in range(max_iters):
+            self.update_interval()
+            # TODO -- maybe a verbosity input to suppress stdout? Regardless, we should be logging!
+            module_logger.info('{}  i:{:3d}'.format(self, i + 1))
+            if self.width < min_width:
+                break
+
+
+def gss_single_rig_ax(esp, rig_ax, amin, amax, is_max, want_to_plot, debug_plot):
+
+    module_logger.info("Performing GSS for rig_ax = %s, amin = %.4f, amax = %.4f." % (rig_ax, amin, amax))
+
+    # if we want to plot, then need an object to handle plotting our points
+    if want_to_plot:
+
+        # initialize and setup plot
+        gpp = GoalProgressPlot(rig_ax)
+        gpp.setup_plot()
+
+        # choose the method for plotting
+        if debug_plot:
+            plot_func = gpp.debug_plot_point
+        else:
+            plot_func = gpp.plot_point
+
+    else:
+
+        plot_func = None
+
+    # run search, which MOVES THE RIG (possibly plot results or prompting user along the way)
+    gs = GoldenSectionSearch(esp, amin, amax, rig_ax, max=is_max, plot=plot_func)
+    gs.four_initial_moves()
+    module_logger.info('{}  i:{:3d}'.format(gs, 0))
+    gs.auto_run()
+
+
+def gss_demo_only(esp, rough_home):
+
+    # get these info (from parsing command line args?)
+    want_to_plot = False
+    debug_plot = False
+
+    # for given rough home position, get the 2 rig axes/ranges to be moved in succession for finding min/max
+    two_rig_ax = TWO_RIG_AX_TO_MOVE[rough_home]
+
+    # iterate over the 2 rig axes to run gss for each
+    for rig_ax, amin, amax in two_rig_ax:
+        is_max = not rough_home.startswith('-')  # is_max = True if rough_home starts with minus sign
+        gss_single_rig_ax(esp, rig_ax, amin, amax, is_max, want_to_plot, debug_plot)
 
 
 def move_axis(esp, ax, pos, settle=None):
@@ -32,7 +218,8 @@ def move_axis(esp, ax, pos, settle=None):
     # get actual angle achieved from position attribute
     actual_pos = stage.position
 
-    module_logger.info("Done moving ESP axis = %d to ACTUAL pos = %.4f." % (ax, actual_pos))
+    # FIXME for this log entry, we should report position for each axis (R, P, Y) instead of just the one we moved
+    module_logger.info("Done moving ESP axis = %d, now ACTUAL pos = %.4f." % (ax, actual_pos))
 
     # TODO what should we do here if difference between actual and desired position is more than some small tolerance?
 
@@ -43,14 +230,23 @@ def move_axis(esp, ax, pos, settle=None):
     return actual_pos
 
 
-def move_to_rough_home_get_counts(esp, num, rhome, axpos):
+def move_to_rough_home_do_gss(esp, rhome, axpos):
     """only used to show refactoring in cooking-show fashion"""
-    module_logger.info('Go to calibration %s rough home (position %d of 6).' % (rhome, num))
+
+    module_logger.info('Go to rough home %s for calibration.' % rhome)
+
+    # iterate over sequence listed in axpos (ax, moves) tuple
     for ax, pos in axpos:
         actual_pos = move_axis(esp, ax, pos)
-    # currently at +x rough home
-    # gss for +x
-    # data collection for +x
+
+    # currently at rough home, rhome
+
+    # gss for rhome
+    gss_demo_only(esp, rhome)
+
+    # data collection for rhome
+
+    module_logger.info('NOT YET IMPLEMENTED: Do gss for %s.' % rhome)  # gss to do data collect, tsh settle & writes
 
 
 def move_to_rough_home(esp, rig_ax):
@@ -185,19 +381,22 @@ def refact2(esp):
 # TODO compare this refact3 function to refact2 routine above
 def refact3(esp):
 
-    # FIXME it's not good practice to assume other axes are where we want them, so move to absolute RPY, not just R or P or Y
+    # TODO note we are only doing safe moves, so we only make minimal adjustments...
+    # TODO ...it's not good practice to assume other axes are where we want them, but we will for safe-trajectory sake
 
-    move_to_rough_home_get_counts(esp, 1, '+x', [(2, 0)])
+    # we assume rig starting in home position, so moves below get us from rough home to rough home safely
 
-    move_to_rough_home_get_counts(esp, 2, '-z', [(2, 80)])
+    move_to_rough_home_do_gss(esp, '+x', [(2, 0)])
 
-    move_to_rough_home_get_counts(esp, 3, '+y', [(3, -90)])
+    move_to_rough_home_do_gss(esp, '-z', [(2, 80)])
 
-    move_to_rough_home_get_counts(esp, 4, '-x', [(2, 170)])
+    move_to_rough_home_do_gss(esp, '+y', [(3, -90)])
 
-    move_to_rough_home_get_counts(esp, 5, '-y', [(2, -100), (3, -90)])
+    move_to_rough_home_do_gss(esp, '-x', [(2, 170)])
 
-    move_to_rough_home_get_counts(esp, 6, '+z', [(3, 0)])
+    move_to_rough_home_do_gss(esp, '-y', [(2, -100), (3, -90)])
+
+    move_to_rough_home_do_gss(esp, '+z', [(3, 0)])
 
     # move back to +x rough home for convenience
     actual_pos = move_axis(esp, 2, 0)
@@ -205,14 +404,12 @@ def refact3(esp):
 
 
 # TODO compare this calibration function to refact3 routine above
-def calibration(esp, ax_order=NICE_ORDER):
+def calibration(esp, safe_moves=SAFE_TRAJ_MOVES):
     """return status/exit code that results from attempt to run calibration given motion controller object, esp"""
 
-    # iterate over rough homes in nice order; empirically-derived trajectories that nicely keep cables, etc.
-    for ax in ax_order:
-        actual_rpy = move_to_rough_home(esp, ax)
-        module_logger.info('NOT YET IMPLEMENTED: Do gss for %s.' % ax)  # gss includes data collect, tsh settle & writes
-        gss.demo_only()
+    # iterate over rough homes for cal in safe manner; empirically-derived trajectories that nicely keep cables, etc.
+    for rhome, moves in safe_moves:
+        move_to_rough_home_do_gss(esp, rhome, moves)
 
     # move back to +x rough home for convenience
     module_logger.info('Finished calibration, so park at +x rough home.')
@@ -221,6 +418,48 @@ def calibration(esp, ax_order=NICE_ORDER):
     # FIXME since ESP's Axis class has an "off" method, we should turn off each axis here
     for rig_ax in range(1, 4):
         module_logger.info('NOT YET IMPLEMENTED: Power off ESP axis #%d.' % rig_ax)
+
+
+def dummy_move_to_get_counts(esp, ax, a):
+    """This is a convenient/dummy function for mimicking cosine profile around min/max values."""
+    from math import cos, radians
+    actual_pos = move_axis(esp, ax, a, settle=TSH_SETTLE_SEC)
+    return 4_123_456 * cos(radians(a))
+
+
+def move_rig_get_counts(esp, ax, a, plot_fun=None):
+    """Move calibration rig axis to desired absolute angle (i.e. "move roll axis to 89.05 degrees").
+
+    Parameters
+    ----------
+    ax : str
+        The rig axis to be moved: 'yaw', 'pitch', or 'roll'.
+    a: float
+        The absolute angle (degrees) that we want to drive the given rig axis to.
+    plot_fun: plot function (method)
+        None for no plotting or...
+        an object method:
+         e.g. GoalProgressPlot's plot_point or debug_plot_point method
+              plot_point: just update plot with (angle, counts) -- no prompts
+              debug_plot_point: prompt user with angle BEFORE moving rig
+
+    Returns
+    -------
+    counts
+
+    """
+    # TODO replace dummy call with actual rig control code
+    if plot_fun:
+        fun_name = plot_fun.__name__
+        if fun_name.lower().startswith('debug'):
+            ans = input("RIG AXIS = %s, ANGLE = %.3f deg...Type [enter] to step, or [x] exit: " % (ax, a))
+            if ans == 'x':
+                raise Exception('User aborted RIG AXIS = %s, ANGLE = %.3f' % (ax, a))
+        counts = dummy_move_to_get_counts(esp, ESP_AX[ax], a)
+        plot_fun(a, counts)  # e.g. GoalProgressPlot.plot_point(x, y)
+        return counts
+    else:
+        return dummy_move_to_get_counts(esp, ESP_AX[ax], a)
 
 
 def run_cal():
