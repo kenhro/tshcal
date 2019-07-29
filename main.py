@@ -154,10 +154,11 @@ def main():
     # FIXME Do we need to do anything prep/config for ESP here? (e.g. GENERAL MODE SELECTION or STATUS FUNCTIONS...
     # FIXME ...maybe from Table 3.5.1 of ESP301 User Guide or possibly something else)?  Will may have answered this?
 
-    # FIXME before any motion begins, our safe trajectories ASSUME starting in home position -- prompt user to verify
+    # FIXME before any motion begins, our safe trajectories ASSUME starting in home position; prompt user to verify home
 
     # FIXME Before delay timer, prompt user with enough info here to enable a go/no-go answer...
     # FIXME ... e.g. hit [Enter] if prompted-profile looks good OR give another keypress with chance to retry or...?
+    # FIXME ** This should include whether or not debug/prompt-along-way is going to happen or not [auto- or semi-auto?]
 
     # FIXME our flow chart shows 2 delays, but no smarts here yet to verify enough time for TSH temperature settling
 

@@ -5,6 +5,7 @@ import operator
 import numpy as np
 from time import sleep
 from collections import deque
+import matplotlib.pyplot as plt
 from newportESP import ESP, Axis
 
 # FIXME refactor to use ESP instead of FakeESP
@@ -41,7 +42,7 @@ class GoldenSectionSearch(object):
         :param rig_ax: String for which rig axis is being controlled and used to search ('yaw', 'pitch' or 'roll')
         :param max: Boolean True to find max; otherwise, find min.
         :param plot: None for no plotting or an object with these methods:
-                     plot_point or debug_plot_point
+                     plot_point (or debug_plot_point) and set_title
         """
         self.esp = esp
         self._a = a
@@ -78,10 +79,12 @@ class GoldenSectionSearch(object):
         # we defer this initialization for interval because calls here will MOVE THE RIG!
 
         # create first 4 pts for interval
-        self._ginterval.append((self._a, move_rig_get_counts(self.esp, self.rig_ax, self._a, self.plot)))
-        self._ginterval.append((self._c, move_rig_get_counts(self.esp, self.rig_ax, self._c, self.plot)))
-        self._ginterval.append((self._d, move_rig_get_counts(self.esp, self.rig_ax, self._d, self.plot)))
-        self._ginterval.append((self._b, move_rig_get_counts(self.esp, self.rig_ax, self._b, self.plot)))
+        if self.plot:
+            self.plot.set_title('doing 1st 4 pts')
+        self._ginterval.append((self._a, move_rig_get_counts(self.esp, self.rig_ax, self._a, self.plot, debug=True)))
+        self._ginterval.append((self._c, move_rig_get_counts(self.esp, self.rig_ax, self._c, self.plot, debug=True)))
+        self._ginterval.append((self._d, move_rig_get_counts(self.esp, self.rig_ax, self._d, self.plot, debug=True)))
+        self._ginterval.append((self._b, move_rig_get_counts(self.esp, self.rig_ax, self._b, self.plot, debug=True)))
 
     def __str__(self):
         s = 'GSS(max)' if self._max else 'GSS(min)'
@@ -123,7 +126,7 @@ class GoldenSectionSearch(object):
             b = self._ginterval[-1][0]
             a = self._ginterval[0][0]
             c = b - (b - a) / self.golden_ratio
-            new_point = (c, move_rig_get_counts(self.esp, self.rig_ax, c, self.plot))
+            new_point = (c, move_rig_get_counts(self.esp, self.rig_ax, c, self.plot, debug=True))
             self._ginterval[1] = new_point                          # a N c d << N is the only new pt
 
         else:
@@ -136,7 +139,7 @@ class GoldenSectionSearch(object):
             b = self._ginterval[-1][0]
             a = self._ginterval[0][0]
             d = a + (b - a) / self.golden_ratio
-            new_point = (d, move_rig_get_counts(self.esp, self.rig_ax, d, self.plot))
+            new_point = (d, move_rig_get_counts(self.esp, self.rig_ax, d, self.plot, debug=True))
             self._ginterval[2] = new_point                          # c d N b << N is the only new pt
 
         # recompute width and mean value
@@ -154,9 +157,11 @@ class GoldenSectionSearch(object):
         """
         for i in range(max_iters):
             self.update_interval()
-            # TODO -- maybe a verbosity input to suppress stdout? Regardless, we should be logging!
+            # FIXME -- maybe a logger for this class?  or pass-in module_logger or how best?
             module_logger.info('{}  i:{:3d}'.format(self, i + 1))
             if self.width < min_width:
+                module_logger.info('The interval width = %.4f is less than min_width = %.4f, so close enough!?' %
+                                   (self.width, min_width))
                 break
 
 
@@ -166,33 +171,28 @@ def gss_single_rig_ax(esp, rig_ax, amin, amax, is_max, want_to_plot, debug_plot)
 
     # if we want to plot, then need an object to handle plotting our points
     if want_to_plot:
-
         # initialize and setup plot
         gpp = GoalProgressPlot(rig_ax)
         gpp.setup_plot()
-
-        # choose the method for plotting
-        if debug_plot:
-            plot_func = gpp.debug_plot_point
-        else:
-            plot_func = gpp.plot_point
-
+        plot_obj = gpp
     else:
+        plot_obj = None
 
-        plot_func = None
+    # FIXME we have not incorporated debug_plot feature yet (just going to hard code as debugging for now)
 
     # run search, which MOVES THE RIG (possibly plot results or prompting user along the way)
-    gs = GoldenSectionSearch(esp, amin, amax, rig_ax, max=is_max, plot=plot_func)
+    gs = GoldenSectionSearch(esp, amin, amax, rig_ax, max=is_max, plot=plot_obj)
     gs.four_initial_moves()
     module_logger.info('{}  i:{:3d}'.format(gs, 0))
     gs.auto_run()
+    plt.close(gpp.fig)
 
 
-def gss_demo_only(esp, rough_home):
+def gss_two_axes(esp, rough_home):
 
     # get these info (from parsing command line args?)
-    want_to_plot = False
-    debug_plot = False
+    want_to_plot = True
+    debug_plot = True
 
     # for given rough home position, get the 2 rig axes/ranges to be moved in succession for finding min/max
     two_rig_ax = TWO_RIG_AX_TO_MOVE[rough_home]
@@ -225,13 +225,14 @@ def move_axis(esp, ax, pos, settle=None):
 
     # pause if settle time (in seconds) is passed in
     if settle:
-        module_logger.info('Pausing for %.1f seconds.' % settle)
+        module_logger.info('Pausing %.1f seconds for TSH to settle.' % settle)
+        sleep(settle)
 
     return actual_pos
 
 
 def move_to_rough_home_do_gss(esp, rhome, axpos):
-    """only used to show refactoring in cooking-show fashion"""
+    """show refactoring in cooking-show fashion"""
 
     module_logger.info('Go to rough home %s for calibration.' % rhome)
 
@@ -241,8 +242,8 @@ def move_to_rough_home_do_gss(esp, rhome, axpos):
 
     # currently at rough home, rhome
 
-    # gss for rhome
-    gss_demo_only(esp, rhome)
+    # do gss for each of two "other" axes when at this rough home position, rhome
+    gss_two_axes(esp, rhome)
 
     # data collection for rhome
 
@@ -424,10 +425,12 @@ def dummy_move_to_get_counts(esp, ax, a):
     """This is a convenient/dummy function for mimicking cosine profile around min/max values."""
     from math import cos, radians
     actual_pos = move_axis(esp, ax, a, settle=TSH_SETTLE_SEC)
+
+    # FIXME this is where'd we collect averaged counts for specified TSH axis
     return 4_123_456 * cos(radians(a))
 
 
-def move_rig_get_counts(esp, ax, a, plot_fun=None):
+def move_rig_get_counts(esp, ax, a, plot_obj=None, debug=False):
     """Move calibration rig axis to desired absolute angle (i.e. "move roll axis to 89.05 degrees").
 
     Parameters
@@ -436,12 +439,13 @@ def move_rig_get_counts(esp, ax, a, plot_fun=None):
         The rig axis to be moved: 'yaw', 'pitch', or 'roll'.
     a: float
         The absolute angle (degrees) that we want to drive the given rig axis to.
-    plot_fun: plot function (method)
+    plot_obj: plot object (with plot_point or debug_plot_point method and set_title method)
         None for no plotting or...
-        an object method:
+        an object such as:
          e.g. GoalProgressPlot's plot_point or debug_plot_point method
               plot_point: just update plot with (angle, counts) -- no prompts
               debug_plot_point: prompt user with angle BEFORE moving rig
+    debug: boolean True if prompt before moving rig; otherwise False
 
     Returns
     -------
@@ -449,14 +453,15 @@ def move_rig_get_counts(esp, ax, a, plot_fun=None):
 
     """
     # TODO replace dummy call with actual rig control code
-    if plot_fun:
-        fun_name = plot_fun.__name__
-        if fun_name.lower().startswith('debug'):
-            ans = input("RIG AXIS = %s, ANGLE = %.3f deg...Type [enter] to step, or [x] exit: " % (ax, a))
+    if plot_obj:
+        if debug:
+            ans = input("MOVE RIG AXIS = %s TO ANGLE = %.3f deg?...Type [enter] for Yes, or [x] exit: " % (ax, a))
+            module_logger.info('User hit enter.')
             if ans == 'x':
+                module_logger.info('User aborted RIG AXIS = %s, ANGLE = %.3f' % (ax, a))
                 raise Exception('User aborted RIG AXIS = %s, ANGLE = %.3f' % (ax, a))
         counts = dummy_move_to_get_counts(esp, ESP_AX[ax], a)
-        plot_fun(a, counts)  # e.g. GoalProgressPlot.plot_point(x, y)
+        plot_obj.plot_point(a, counts)  # e.g. GoalProgressPlot.plot_point(x, y)
         return counts
     else:
         return dummy_move_to_get_counts(esp, ESP_AX[ax], a)

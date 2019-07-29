@@ -13,7 +13,7 @@ DEFAULT_RATE = 250.0      # samples/second
 DEFAULT_GAIN = 1          # the value (not the code)
 DEFAULT_UNITS = 'counts'  # {counts|volts|ug}
 TSH_AX = {'x': 0, 'y': 1, 'z': 2}  # map axis letter to index for TSH axes
-TSH_SETTLE_SEC = 5   # amount of time allocated for accelerometer to "settle" after a move & before reading
+TSH_SETTLE_SEC = 0.05   # 5 # amount of time allocated for accelerometer to "settle" after a move & before reading
 TSH_BUFFER_SEC = 60  # amount of time to take mean (for example) with calibration find min/max
 
 # ---------------------------------------------------------------------------------------------------------------------

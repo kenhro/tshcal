@@ -11,12 +11,13 @@ from tshcal.commanding.plot_progress_helper import SF_COUNTS, NUM_PTS
 class GoalProgressPlot(object):
 
     def __init__(self, rig_ax, num_pts=NUM_PTS):
-        self.rig_ax = rig_ax
-        self.num_pts = num_pts
+        self.rig_ax = rig_ax    # which rig_ax we working on
+        self.num_pts = num_pts  # how much of faded-plot-points history to keep
         self.search_pts = None
         self.fig = None
         self.ax = None
         self.scat = None
+        self.title = None
 
     def setup_plot(self):
 
@@ -40,7 +41,10 @@ class GoalProgressPlot(object):
         self.scat = self.ax.scatter(self.search_pts['position'][:, 0], self.search_pts['position'][:, 1],
                                     s=75, linewidth=1.0, edgecolors=self.search_pts['color'], facecolors='none')
 
-        self.ax.set_title('Rig Axis = %s, Time: %s' % (self.rig_ax, datetime.datetime.now()))
+        # initial plot title
+        time_str = datetime.datetime.now().strftime('%Y-%m-%d/%H:%M:%S')
+        self.title = 'Rig Axis = %s, Time: %s' % (self.rig_ax, time_str)
+        self.set_title('')
 
         # show the progress plot
         plt.ion()
@@ -67,7 +71,7 @@ class GoalProgressPlot(object):
         self.step(x, y)
 
         # update title with system time
-        self.ax.set_title('Time: %s' % datetime.datetime.now())
+        self.set_title(' Angle = %.4f, Counts/%d = %.1f' % (x, SF_COUNTS, y))
 
         # update scatter pts collection with new edgecolors (transparencies) & positions
         self.scat.set_edgecolors(self.search_pts['color'])
@@ -75,6 +79,9 @@ class GoalProgressPlot(object):
 
         # update canvas
         plt.draw()
+
+    def set_title(self, suffix):
+        self.ax.set_title('%s %s' % (self.title, suffix))
 
     def plot_point(self, x, y):
         self.plot_step(x, y)
