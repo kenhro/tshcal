@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import logging
 import operator
 import numpy as np
@@ -34,7 +35,7 @@ class GoldenSectionSearch(object):
 
     golden_ratio = (1 + np.sqrt(5)) / 2
 
-    def __init__(self, rough_home, tsh, esp, a, b, rig_ax, max=True, plot=None):
+    def __init__(self, rough_home, tsh, esp, a, b, rig_ax, max=True, plot=None, debug=False):
         """
         Parameters
         ----------
@@ -59,6 +60,7 @@ class GoldenSectionSearch(object):
         self.mean = np.mean([a, b])
         self._max = max  # True to find max, False to find min
         self.plot = plot  # None for no plot; otherwise object with prescribed methods
+        self.debug = debug
         self._buffer = None
         self._c = b - self.width / self.golden_ratio
         self._d = a + self.width / self.golden_ratio
@@ -80,7 +82,7 @@ class GoldenSectionSearch(object):
         """
         if rax in ['roll', 'pitch', 'yaw']:
             return rax
-        else:/home/pims/PycharmProjects/cal/venv/bin/python /home/pims/dev/tshcal/main.py -v
+        else:
             raise ValueError("invalid input ax ('%s') must be: 'roll', 'pitch' or 'yaw'" % rax)
 
     def four_initial_moves(self):
@@ -97,7 +99,7 @@ class GoldenSectionSearch(object):
 
         # iterate over pts in this order a, c, d, b
         for pt in [self._a, self._c, self._d, self._b]:
-            avg = move_rig_get_counts(self.esp, self.tsh, self.rig_ax, pt, self.idx_tsh_ax, self.plot, debug=True)
+            avg = move_rig_get_counts(self.esp, self.tsh, self.rig_ax, pt, self.idx_tsh_ax, self.plot, debug=self.debug)
             self._ginterval.append((pt, avg))
 
     def __str__(self):
@@ -140,7 +142,7 @@ class GoldenSectionSearch(object):
             b = self._ginterval[-1][0]
             a = self._ginterval[0][0]
             c = b - (b - a) / self.golden_ratio
-            avg = move_rig_get_counts(self.esp, self.tsh, self.rig_ax, c, self.idx_tsh_ax, self.plot, debug=True)
+            avg = move_rig_get_counts(self.esp, self.tsh, self.rig_ax, c, self.idx_tsh_ax, self.plot, debug=self.debug)
             new_point = (c, avg)
             self._ginterval[1] = new_point                          # a N c d << N is the only new pt
 
@@ -154,7 +156,7 @@ class GoldenSectionSearch(object):
             b = self._ginterval[-1][0]
             a = self._ginterval[0][0]
             d = a + (b - a) / self.golden_ratio
-            avg = move_rig_get_counts(self.esp, self.tsh, self.rig_ax, d, self.idx_tsh_ax, self.plot, debug=True)
+            avg = move_rig_get_counts(self.esp, self.tsh, self.rig_ax, d, self.idx_tsh_ax, self.plot, debug=self.debug)
             new_point = (d, avg)
             self._ginterval[2] = new_point                          # c d N b << N is the only new pt
 
@@ -173,11 +175,11 @@ class GoldenSectionSearch(object):
         """
         for i in range(max_iters):
             self.update_interval()
-            # FIXME -- maybe a logger for this class?  or pass-in module_logger or how best?
             module_logger.info('{}  i:{:3d}'.format(self, i + 1))
             if self.width < min_width:
                 module_logger.info('The interval width = %.4f is less than min_width = %.4f, so close enough!? %s' %
-                                   (self.width, min_width, '@' * 33))
+                                   (self.width, min_width, '<' * 44))
+                module_logger.info('GSS yield: {}'.format(self))
                 break
 
 
@@ -198,28 +200,39 @@ def gss_single_rig_ax(rough_home, tsh, esp, rig_ax, amin, amax, is_max, want_to_
     # FIXME we have not incorporated debug_plot feature yet (just going to hard code as debugging for now)
 
     # run search, which MOVES THE RIG (possibly plot results or prompting user along the way)
-    gs = GoldenSectionSearch(rough_home, tsh, esp, amin, amax, rig_ax, max=is_max, plot=plot_obj)
+    gs = GoldenSectionSearch(rough_home, tsh, esp, amin, amax, rig_ax, max=is_max, plot=plot_obj, debug=debug_plot)
     gs.four_initial_moves()
     module_logger.info('{}  i:{:3d}'.format(gs, 0))
     gs.auto_run()
     plt.close(gpp.fig)
 
 
-def gss_two_axes(tsh, esp, rough_home):
+def gss_two_axes(tsh, esp, out_dir, rough_home, want_to_plot=True, debug_plot=False):
 
-    # FIXME get these info (from parsing command line args?)
-    want_to_plot = True
-    debug_plot = True
+    # # FIXME get these info (from parsing command line args?)
+    # want_to_plot = True
+    # debug_plot = True
 
     # for given rough home position, get the 2 rig axes/ranges to be moved in succession for finding min/max
     two_rig_ax = TWO_RIG_AX_TO_MOVE[rough_home]
+    is_max = not rough_home.startswith('-')  # is_max = True if rough_home starts with minus sign
 
     module_logger.info('The two rig axes for %s are %s.' % (rough_home, two_rig_ax))
 
-    # iterate over the 2 rig axes to run gss for each
-    for rig_ax, amin, amax in two_rig_ax:
-        is_max = not rough_home.startswith('-')  # is_max = True if rough_home starts with minus sign
-        gss_single_rig_ax(rough_home, tsh, esp, rig_ax, amin, amax, is_max, want_to_plot, debug_plot)
+    # find min/max for first of 2 rig axes (run gss on it)
+    module_logger.info('Find min/max for 1st of 2 rig axes for %s are %s.' % (rough_home, two_rig_ax))
+    rig_ax, amin, amax = two_rig_ax[0]
+    gss_single_rig_ax(rough_home, tsh, esp, rig_ax, amin, amax, is_max, want_to_plot, debug_plot)
+
+    # find min/max for 2nd of 2 rig axes (run gss on it)
+    module_logger.info('Find min/max for 2nd of 2 rig axes for %s are %s.' % (rough_home, two_rig_ax))
+    rig_ax, amin, amax = two_rig_ax[1]
+    gss_single_rig_ax(rough_home, tsh, esp, rig_ax, amin, amax, is_max, want_to_plot, debug_plot)
+
+    # save data for this axis to file
+    bname = 'axes_tsh' + tsh.name.replace('s', 's-') + '_' + rough_home
+    data_file = os.path.join(out_dir, bname)
+    module_logger.info('Save data to file %s.' % data_file)
 
 
 def move_axis(esp, ax, pos, tsh_settle=None, esp_settle=None):
@@ -284,7 +297,7 @@ def move_to_rough_home(esp, rig_ax):
     return actual_roll, actual_pitch, actual_yaw
 
 
-def move_to_rough_home_do_gss(tsh, esp, rhome, axpos):
+def move_to_rough_home_do_gss(tsh, esp, out_dir, rhome, axpos, want_to_plot=True, debug_plot=False):
     """move to rough home, rhome, via (ax, pos) values in axpos tuple"""
 
     module_logger.info('Go to rough home %s for calibration.' % rhome)
@@ -297,7 +310,7 @@ def move_to_rough_home_do_gss(tsh, esp, rhome, axpos):
 
     # do gss for each of two "other" axes when at this rough home position, rhome
     module_logger.info('Doing gss for %s.' % rhome)  # gss to do data collect, tsh settle & writes
-    gss_two_axes(tsh, esp, rhome)
+    gss_two_axes(tsh, esp, out_dir, rhome, want_to_plot=want_to_plot, debug_plot=debug_plot)
 
     # data collection for rhome
     # FIXME we have not gotten to this point yet!
@@ -435,13 +448,12 @@ def refact3(esp):
 
 
 # TODO compare this calibration function to refact3 routine above
-def calibration(tsh, esp, safe_moves=SAFE_TRAJ_MOVES):
+def calibration(tsh, esp, out_dir, safe_moves=SAFE_TRAJ_MOVES, want_to_plot=True, debug_plot=False):
     """return status/exit code that results from attempt to run calibration given motion controller object, esp"""
 
     # iterate over rough homes for cal in safe manner; empirically-derived trajectories that nicely keep cables, etc.
     for rhome, moves in safe_moves:
-        move_to_rough_home_do_gss(tsh, esp, rhome, moves)  # does min/max search and writes results
-        #move_to_rough_home(esp, rhome)  # zeros some positions to get clean on all 3 rig axes (stages) for next move
+        move_to_rough_home_do_gss(tsh, esp, out_dir, rhome, moves, want_to_plot=want_to_plot, debug_plot=debug_plot)  # min/max search & write results
 
     # move back to +x rough home for convenience
     module_logger.info('Finished calibration, so park at +x rough home.')
@@ -530,20 +542,11 @@ def move_rig_get_counts(esp, tsh, ax, a, idx_tsh_ax, plot_obj=None, debug=False)
     return avg_counts
 
 
-def run_cal(tsh):
+def run_cal(tsh, out_dir, want_to_plot=True, debug_plot=False):
     """a fake/placeholder for now, but actual code will be fairly simple and probably alot like what's shown here"""
 
     # open communication with controller
     esp = ESP('/dev/ttyUSB0')
 
     # run calibration routine
-    calibration(tsh, esp)
-
-    # rig_ax = 'roll'
-    # angle = 2
-    # avg_counts = move_rig_get_counts(esp, tsh, rig_ax, angle)
-    # module_logger.debug('avg_counts: x = {}, y = {}, z = {}'.format(*avg_counts))
-
-
-if __name__ == '__main__':
-    run_cal()
+    calibration(tsh, esp, out_dir, want_to_plot=want_to_plot, debug_plot=debug_plot)

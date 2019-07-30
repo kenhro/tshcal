@@ -109,7 +109,7 @@ def get_tsh_buffer_summary(tsh, sec=3, logger=None):
     return s
 
 
-def main():
+def main(want_to_plot=True, debug_plot=True):
     """return status/exit code that results from running main tshcal application"""
 
     # create logger
@@ -161,7 +161,7 @@ def main():
     wait_for_start_time(args.start, module_logger)
 
     # run calibration routine
-    esp_commands.run_cal(tsh)
+    esp_commands.run_cal(tsh, args.outdir, want_to_plot=want_to_plot, debug_plot=debug_plot)
 
     # FIXME are there any commands we need to send to TSH at this point after running calibration?
 
@@ -172,4 +172,4 @@ def main():
 
 if __name__ == '__main__':
 
-    sys.exit(main())
+    sys.exit(main(want_to_plot=True, debug_plot=False))

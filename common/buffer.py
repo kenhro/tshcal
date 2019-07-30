@@ -141,12 +141,12 @@ class TshAccelBuffer(object):
         if self.idx + offset > self.xyz.shape[0]:
             offset = self.xyz[self.idx:, :].shape[0]
             self.xyz[self.idx:self.idx + offset, :] = more[0:offset, :]
-            self.logger.debug('Buffer added %d xyz records.' % offset)
+            # self.logger.debug('Buffer added %d xyz records.' % offset)
             self.is_full = True
-            self.logger.warning('Buffer now full, so stop adding already, the array shape is %s.' % str(self.xyz.shape))
+            self.logger.warning('Buffer now full, so stop adding, the array shape is %s.' % str(self.xyz.shape))
         else:
             self.xyz[self.idx:self.idx + offset, :] = more
-            self.logger.debug('Buffer added %d xyz records.' % offset)
+            # self.logger.debug('Buffer added %d xyz records.' % offset)
 
         # print(self.idx, self.idx + offset)
         self.idx = self.idx + offset
