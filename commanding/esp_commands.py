@@ -9,16 +9,16 @@ import matplotlib.pyplot as plt
 
 from newportESP import ESP, Axis
 # FIXME refactor to use ESP instead of FakeESP
-from tshcal.tests.fake_esp import FakeESP  # faking ESP object to facilitate the demo code here
+# from tshcal.tests.fake_esp import FakeESP  # faking ESP object to facilitate the demo code here
 
-from tshcal.defaults import ROUGH_HOMES, NICE_ORDER
+from tshcal.defaults import ROUGH_HOMES, DEFAULT_PORT
 from tshcal.constants_esp import SAFE_TRAJ_MOVES
-from tshcal.constants_esp import TWO_RIG_AX_TO_MOVE
+from tshcal.constants_esp import TWO_RIG_AX_TO_MOVE, ESP_SETTLE
 from tshcal.commanding.plot_progress import GoalProgressPlot
 from tshcal.constants_esp import ESP_AX
 from tshcal.defaults import TSH_SETTLE_SEC, TSH_BUFFER_SEC
 from tshcal.common import buffer
-from tshcal.secret import TSHES14_IPADDR
+
 
 # create logger
 module_logger = logging.getLogger('tshcal')
@@ -34,10 +34,12 @@ class GoldenSectionSearch(object):
 
     golden_ratio = (1 + np.sqrt(5)) / 2
 
-    def __init__(self, esp, a, b, rig_ax, max=True, plot=None):
+    def __init__(self, rough_home, tsh, esp, a, b, rig_ax, max=True, plot=None):
         """
         Parameters
         ----------
+        :param rough_home: string for which rough_home we are nearby
+        :param tsh: TSH "data source" object.
         :param esp: Newport ESP motion controller object.
         :param a: Initial float value for smallest angle in interval being searched.
         :param b: Initial float value for largest angle in interval being searched.
@@ -46,6 +48,9 @@ class GoldenSectionSearch(object):
         :param plot: None for no plotting or an object with these methods:
                      plot_point (or debug_plot_point) and set_title
         """
+        self.rough_home = rough_home
+        self.idx_tsh_ax = self._get_idx_tsh_ax()
+        self.tsh = tsh
         self.esp = esp
         self._a = a
         self._b = b
@@ -60,6 +65,12 @@ class GoldenSectionSearch(object):
         self._ginterval = deque(maxlen=4)
         self.current_angle = None
 
+    def _get_idx_tsh_ax(self):
+        """given rough home (e.g. '+x'), return index for mean(xyz) array"""
+        ta = self.rough_home[-1]
+        TAS = {'x': 0, 'y': 1, 'z': 2}
+        return TAS[ta]
+
     def _set_ax(self, rax):
         """
         Validate and set attribute for rig axis.
@@ -69,7 +80,7 @@ class GoldenSectionSearch(object):
         """
         if rax in ['roll', 'pitch', 'yaw']:
             return rax
-        else:
+        else:/home/pims/PycharmProjects/cal/venv/bin/python /home/pims/dev/tshcal/main.py -v
             raise ValueError("invalid input ax ('%s') must be: 'roll', 'pitch' or 'yaw'" % rax)
 
     def four_initial_moves(self):
@@ -83,10 +94,11 @@ class GoldenSectionSearch(object):
         # create first 4 pts for interval
         if self.plot:
             self.plot.set_title('doing 1st 4 pts')
-        self._ginterval.append((self._a, move_rig_get_counts(self.esp, self.rig_ax, self._a, self.plot, debug=True)))
-        self._ginterval.append((self._c, move_rig_get_counts(self.esp, self.rig_ax, self._c, self.plot, debug=True)))
-        self._ginterval.append((self._d, move_rig_get_counts(self.esp, self.rig_ax, self._d, self.plot, debug=True)))
-        self._ginterval.append((self._b, move_rig_get_counts(self.esp, self.rig_ax, self._b, self.plot, debug=True)))
+
+        # iterate over pts in this order a, c, d, b
+        for pt in [self._a, self._c, self._d, self._b]:
+            avg = move_rig_get_counts(self.esp, self.tsh, self.rig_ax, pt, self.idx_tsh_ax, self.plot, debug=True)
+            self._ginterval.append((pt, avg))
 
     def __str__(self):
         s = 'GSS(max)' if self._max else 'GSS(min)'
@@ -128,7 +140,8 @@ class GoldenSectionSearch(object):
             b = self._ginterval[-1][0]
             a = self._ginterval[0][0]
             c = b - (b - a) / self.golden_ratio
-            new_point = (c, move_rig_get_counts(self.esp, self.rig_ax, c, self.plot, debug=True))
+            avg = move_rig_get_counts(self.esp, self.tsh, self.rig_ax, c, self.idx_tsh_ax, self.plot, debug=True)
+            new_point = (c, avg)
             self._ginterval[1] = new_point                          # a N c d << N is the only new pt
 
         else:
@@ -141,7 +154,8 @@ class GoldenSectionSearch(object):
             b = self._ginterval[-1][0]
             a = self._ginterval[0][0]
             d = a + (b - a) / self.golden_ratio
-            new_point = (d, move_rig_get_counts(self.esp, self.rig_ax, d, self.plot, debug=True))
+            avg = move_rig_get_counts(self.esp, self.tsh, self.rig_ax, d, self.idx_tsh_ax, self.plot, debug=True)
+            new_point = (d, avg)
             self._ginterval[2] = new_point                          # c d N b << N is the only new pt
 
         # recompute width and mean value
@@ -162,14 +176,15 @@ class GoldenSectionSearch(object):
             # FIXME -- maybe a logger for this class?  or pass-in module_logger or how best?
             module_logger.info('{}  i:{:3d}'.format(self, i + 1))
             if self.width < min_width:
-                module_logger.info('The interval width = %.4f is less than min_width = %.4f, so close enough!?' %
-                                   (self.width, min_width))
+                module_logger.info('The interval width = %.4f is less than min_width = %.4f, so close enough!? %s' %
+                                   (self.width, min_width, '@' * 33))
                 break
 
 
-def gss_single_rig_ax(esp, rig_ax, amin, amax, is_max, want_to_plot, debug_plot):
+def gss_single_rig_ax(rough_home, tsh, esp, rig_ax, amin, amax, is_max, want_to_plot, debug_plot):
 
-    module_logger.info("Performing GSS for rig_ax = %s, amin = %.4f, amax = %.4f." % (rig_ax, amin, amax))
+    module_logger.info("Near %s, performing GSS for rig_ax = %s, amin = %.4f, amax = %.4f." %
+                       (rough_home, rig_ax, amin, amax))
 
     # if we want to plot, then need an object to handle plotting our points
     if want_to_plot:
@@ -183,29 +198,31 @@ def gss_single_rig_ax(esp, rig_ax, amin, amax, is_max, want_to_plot, debug_plot)
     # FIXME we have not incorporated debug_plot feature yet (just going to hard code as debugging for now)
 
     # run search, which MOVES THE RIG (possibly plot results or prompting user along the way)
-    gs = GoldenSectionSearch(esp, amin, amax, rig_ax, max=is_max, plot=plot_obj)
+    gs = GoldenSectionSearch(rough_home, tsh, esp, amin, amax, rig_ax, max=is_max, plot=plot_obj)
     gs.four_initial_moves()
     module_logger.info('{}  i:{:3d}'.format(gs, 0))
     gs.auto_run()
     plt.close(gpp.fig)
 
 
-def gss_two_axes(esp, rough_home):
+def gss_two_axes(tsh, esp, rough_home):
 
-    # get these info (from parsing command line args?)
+    # FIXME get these info (from parsing command line args?)
     want_to_plot = True
     debug_plot = True
 
     # for given rough home position, get the 2 rig axes/ranges to be moved in succession for finding min/max
     two_rig_ax = TWO_RIG_AX_TO_MOVE[rough_home]
 
+    module_logger.info('The two rig axes for %s are %s.' % (rough_home, two_rig_ax))
+
     # iterate over the 2 rig axes to run gss for each
     for rig_ax, amin, amax in two_rig_ax:
         is_max = not rough_home.startswith('-')  # is_max = True if rough_home starts with minus sign
-        gss_single_rig_ax(esp, rig_ax, amin, amax, is_max, want_to_plot, debug_plot)
+        gss_single_rig_ax(rough_home, tsh, esp, rig_ax, amin, amax, is_max, want_to_plot, debug_plot)
 
 
-def move_axis(esp, ax, pos, settle=None):
+def move_axis(esp, ax, pos, tsh_settle=None, esp_settle=None):
     """return float for actual position after command to move esp axis, ax, to desired angle (in degrees), pos"""
 
     module_logger.info("Moving ESP axis = %d to pos = %.4f." % (ax, pos))
@@ -215,7 +232,12 @@ def move_axis(esp, ax, pos, settle=None):
     stage.on()
 
     # move axis to desired position
-    stage.move_to(pos, True)  # if 2nd arg is True, then further execution blocked until move is completed
+    stage.move_to(pos, True)  # if 2nd arg is True, then further execution blocked until move is completed [sorta?]
+
+    # allow stage to settle
+    if esp_settle:
+        module_logger.info('Let stage settle for %d sec.' % esp_settle)
+        sleep(esp_settle)
 
     # get actual angle achieved from position attribute
     actual_pos = stage.position
@@ -225,10 +247,10 @@ def move_axis(esp, ax, pos, settle=None):
 
     # TODO what should we do here if difference between actual and desired position is more than some small tolerance?
 
-    # pause if settle time (in seconds) is passed in
-    if settle:
-        module_logger.info('Pausing %.1f seconds for TSH to settle.' % settle)
-        sleep(settle)
+    # pause if settle time (in seconds) for tsh is passed in
+    if tsh_settle:
+        module_logger.info('Pausing %.1f seconds for TSH to settle.' % tsh_settle)
+        sleep(tsh_settle)
 
     return actual_pos
 
@@ -262,22 +284,23 @@ def move_to_rough_home(esp, rig_ax):
     return actual_roll, actual_pitch, actual_yaw
 
 
-def move_to_rough_home_do_gss(esp, rhome, axpos):
+def move_to_rough_home_do_gss(tsh, esp, rhome, axpos):
     """move to rough home, rhome, via (ax, pos) values in axpos tuple"""
 
     module_logger.info('Go to rough home %s for calibration.' % rhome)
 
-    # iterate over sequence listed in axpos (ax, moves) tuple
+    # iterate over sequence listed in axpos (ax, moves) tuple to get to initial pos
     for ax, pos in axpos:
-        actual_pos = move_axis(esp, ax, pos)
+        actual_pos = move_axis(esp, ax, pos, esp_settle=ESP_SETTLE)
 
     # currently at rough home, rhome
 
     # do gss for each of two "other" axes when at this rough home position, rhome
-    module_logger.info('NOT YET IMPLEMENTED: Do gss for %s.' % rhome)  # gss to do data collect, tsh settle & writes
-    #gss_two_axes(esp, rhome)
+    module_logger.info('Doing gss for %s.' % rhome)  # gss to do data collect, tsh settle & writes
+    gss_two_axes(tsh, esp, rhome)
 
     # data collection for rhome
+    # FIXME we have not gotten to this point yet!
 
 
 # TODO compare what we had as a rough draft of prototype_routine to refact2 function below
@@ -412,13 +435,13 @@ def refact3(esp):
 
 
 # TODO compare this calibration function to refact3 routine above
-def calibration(esp, safe_moves=SAFE_TRAJ_MOVES):
+def calibration(tsh, esp, safe_moves=SAFE_TRAJ_MOVES):
     """return status/exit code that results from attempt to run calibration given motion controller object, esp"""
 
     # iterate over rough homes for cal in safe manner; empirically-derived trajectories that nicely keep cables, etc.
     for rhome, moves in safe_moves:
-        move_to_rough_home_do_gss(esp, rhome, moves)  # does min/max search and writes results
-        move_to_rough_home(esp, rhome)  # zeros some positions to get clean on all 3 rig axes (stages) for next move
+        move_to_rough_home_do_gss(tsh, esp, rhome, moves)  # does min/max search and writes results
+        #move_to_rough_home(esp, rhome)  # zeros some positions to get clean on all 3 rig axes (stages) for next move
 
     # move back to +x rough home for convenience
     module_logger.info('Finished calibration, so park at +x rough home.')
@@ -445,23 +468,18 @@ def get_tsh_counts(tsh):
 
     """
 
-    HOST = TSHES14_IPADDR  # string with tsh's ip address
-    PORT = 9750  # port used by tsh to transmit accel. data
-    fs, k = 250.0, 0  # fake/dummy arguments for sample rate and gain
-
-    # create buffer
+    # create data buffer
     sec = TSH_BUFFER_SEC  # how many seconds-worth of TSH data (x,y,z acceleration values)
     module_logger.warning('ASSUMING the TSH is configured (sample rate, gain, and so on).')
 
     # create data buffer -- at some pt in code before we need mean(counts), probably just after GSS min/max found
-    tsh = buffer.Tsh('tshes-14', fs, k)
-    tsh_buff = buffer.TshAccelBuffer(tsh, sec, logger=module_logger)
-    buffer.raw_data_from_socket(HOST, tsh_buff, port=PORT)
+    buff = buffer.TshAccelBuffer(tsh, sec, logger=module_logger)
+    buffer.raw_data_from_socket(tsh.ip, buff, port=DEFAULT_PORT)  # this populates 2nd arg, buff
 
-    return np.mean(tsh_buff.xyz, axis=0)
+    return np.mean(buff.xyz, axis=0)
 
 
-def move_rig_get_counts(esp, tsh, ax, a, plot_obj=None, debug=False):
+def move_rig_get_counts(esp, tsh, ax, a, idx_tsh_ax, plot_obj=None, debug=False):
     """Move esp calibration rig's axis, ax, to desired absolute angle, a (i.e. "move roll axis to 89.05 degrees") and
     return average counts after TSH settles at that position.
 
@@ -475,6 +493,8 @@ def move_rig_get_counts(esp, tsh, ax, a, plot_obj=None, debug=False):
         The rig axis to be moved: 'yaw', 'pitch', or 'roll'.
     a: float
         The absolute angle (degrees) that we want to drive the given rig axis to.
+    idx_tsh_ax: int
+        Index of which mean value we want 0 for x, 1 for y or 2 for z.
     plot_obj: plot object (with plot_point or debug_plot_point method and set_title method)
         None for no plotting or...
         an object such as:
@@ -497,10 +517,10 @@ def move_rig_get_counts(esp, tsh, ax, a, plot_obj=None, debug=False):
             raise Exception('User aborted RIG AXIS = %s, ANGLE = %.3f' % (ax, a))
 
     # move rig
-    actual_pos = move_axis(esp, ESP_AX[ax], a, settle=TSH_SETTLE_SEC)
+    actual_pos = move_axis(esp, ESP_AX[ax], a, tsh_settle=TSH_SETTLE_SEC, esp_settle=ESP_SETTLE)
 
     # get counts
-    avg_counts = get_tsh_counts(tsh)
+    avg_counts = get_tsh_counts(tsh)[idx_tsh_ax]
 
     # FIXME we want a particular element of avg_counts (not all 3 components)
     # send (x, y) = (angle, counts) to plot this point
@@ -510,19 +530,19 @@ def move_rig_get_counts(esp, tsh, ax, a, plot_obj=None, debug=False):
     return avg_counts
 
 
-def run_cal():
+def run_cal(tsh):
     """a fake/placeholder for now, but actual code will be fairly simple and probably alot like what's shown here"""
 
     # open communication with controller
-    esp = FakeESP('/dev/ttyUSB0')
+    esp = ESP('/dev/ttyUSB0')
 
     # run calibration routine
-    #calibration(esp)
+    calibration(tsh, esp)
 
-    rig_ax = 1
-    angle = 2
-    avg_counts = move_and_get_counts(esp, rig_ax, angle)
-    module_logger.debug('avg_counts: x = {}, y = {}, z = {}'.format(*avg_counts))
+    # rig_ax = 'roll'
+    # angle = 2
+    # avg_counts = move_rig_get_counts(esp, tsh, rig_ax, angle)
+    # module_logger.debug('avg_counts: x = {}, y = {}, z = {}'.format(*avg_counts))
 
 
 if __name__ == '__main__':

@@ -10,6 +10,7 @@ from tshcal.common.time_utils import unix_to_human_time
 from tshcal.defaults import TSH_BUFFER_SEC
 from tshcal.common.tshes_params_packet import TshesMessage
 from tshcal.constants_tsh import TSH_RATES, TSH_GAINS, TSH_UNITS
+from tshcal.secret import IP_STUB
 
 
 # create logger
@@ -75,7 +76,8 @@ class Tsh(object):
 
     def __init__(self, name, rate, gain):
         self._validate_name(name)
-        self.name = name  # i.e. tsh_id (e.g. tshes-13)
+        self.name = name  # i.e. tsh_id (e.g. es14)
+        self.ip = IP_STUB + self.name[-2:]
         self.rate = rate  # sample rate in sa/sec
         self.gain = gain  # gain [code?]  # FIXME figure out if we want code or actual gain value here [probably code!]
         module_logger.warning("Instantiated %s object but it does not really (yet) do any get/set with TSH commands."
@@ -88,12 +90,14 @@ class Tsh(object):
         return s
 
     def _validate_name(self, name):
-        regexp = re.compile(r'^tshes-\d{2}$')
+        regexp = re.compile(r'^es\d{2}$')
         if regexp.search(name):
-            module_logger.debug("Validated %s's name attribute." % self.__class__.__name__)
+            module_logger.debug("Validated %s object's name attribute = %s." % (self.__class__.__name__, name))
         else:
-            module_logger.info("Invalid %s.name attribute, doesn't match regular expression." % self.__class__.__name__)
-            raise ValueError("Invalid %s.name attribute, doesn't match regular expression." % self.__class__.__name__)
+            module_logger.info("Invalid %s.name = %s, doesn't match regular expression."
+                               % (name, self.__class__.__name__))
+            raise ValueError("Invalid %s.name = %s, doesn't match regular expression."
+                               % (name, self.__class__.__name__))
 
 
 class TshAccelBuffer(object):
@@ -152,7 +156,7 @@ def raw_data_from_socket(ip_addr, buff, port=9750):
     """establish socket connection to [tsh] (ip_addr)ess on data port (9750) and show pertinent data"""
 
     # crude attempt at identifying columns in log entriess
-    module_logger.info(get_buff_header())
+    # module_logger.debug(get_buff_header())
 
     previous_count = -1
 
@@ -188,7 +192,7 @@ def raw_data_from_socket(ip_addr, buff, port=9750):
 
                         # let's throw in a line with dashes near counter column when we detect one or more missing count
                         if counter - previous_count != 1:
-                            module_logger.info(' '*60 + '-'*7)
+                            module_logger.debug(' '*60 + '-'*7)
                         previous_count = counter
 
                         # timestamp
@@ -254,27 +258,27 @@ def raw_data_from_socket(ip_addr, buff, port=9750):
                             x, y, z, dio = struct.unpack('!fffI', more_data[start:stop])  # Network byte order
                             xyz.append((x, y, z))
 
-                        module_logger.info("{:>4} {} {:>4s} {:>10d} {} {:>5d} {:>3d} {:>6.1f} {:>6.2f} {:>4.1f} {:>6s}"
-                              " {:>6s} {:>15s} {} {:>3d} {:>3d} {:>3d} {:>4d}".format(
-                            len(data),
-                            str(tm).replace('\n', ' '),
-                            tshes_id.decode('utf-8'),
-                            counter,
-                            unix_to_human_time(timestamp),
-                            packet_status,
-                            num_samples,
-                            rate,
-                            cutoff_freq,
-                            gain,
-                            inp,
-                            unit,
-                            adjustment,
-                            unix_to_human_time(end_time),
-                            received_samples,
-                            left_over_bytes,
-                            deficit_samples,
-                            stop - left_over_bytes)
-                        )
+                        # module_logger.debug("{:>4} {} {:>4s} {:>10d} {} {:>5d} {:>3d} {:>6.1f} {:>6.2f} {:>4.1f} {:>6s}"
+                        #       " {:>6s} {:>15s} {} {:>3d} {:>3d} {:>3d} {:>4d}".format(
+                        #     len(data),
+                        #     str(tm).replace('\n', ' '),
+                        #     tshes_id.decode('utf-8'),
+                        #     counter,
+                        #     unix_to_human_time(timestamp),
+                        #     packet_status,
+                        #     num_samples,
+                        #     rate,
+                        #     cutoff_freq,
+                        #     gain,
+                        #     inp,
+                        #     unit,
+                        #     adjustment,
+                        #     unix_to_human_time(end_time),
+                        #     received_samples,
+                        #     left_over_bytes,
+                        #     deficit_samples,
+                        #     stop - left_over_bytes)
+                        # )
 
                         buff.add(np.array(xyz))
 

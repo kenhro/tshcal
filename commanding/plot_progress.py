@@ -34,8 +34,8 @@ class GoalProgressPlot(object):
 
         # adjust axes
         self.ax.axis([0, 1, 0, 1])
-        self.ax.set_xlim(0, 360)  # TODO set xticks based on current rough home position and/or interval
-        self.ax.set_ylim(-4.2e6, 4.2e6)  # TODO set yticks how?  how to know good, fairly narrow bounds?
+        self.ax.set_xlim(-181, 181)  # TODO set xticks based on current rough home position and/or interval
+        self.ax.set_ylim(-5.2e6, 5.2e6)  # TODO set yticks how?  how to know good, fairly narrow bounds?
 
         # construct scatter plot which updates via animation as the rig moves
         self.scat = self.ax.scatter(self.search_pts['position'][:, 0], self.search_pts['position'][:, 1],

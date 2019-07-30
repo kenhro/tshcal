@@ -1,7 +1,7 @@
 # FIXME need to fix TWO_RIG_AX_TO_MOVE here; empirically-derived, like we did with safe trajectories
 # define rig_ax to be moved to achieve either min or max given that we are at designated rough home position
 TWO_RIG_AX_TO_MOVE = {
-# rough_home          ax1  min  max       ax2   min   max
+# rough_home          ax1   min   max       ax2   min   max
         '+x':   [('pitch',  -10,  +10), ('roll', -10,  +10)],
         '-x':   [('pitch', +160, +172), ('roll', -10,  +10)],
         '+y':   [('pitch',  +70,  +90), ('yaw',  -80, -100)],
@@ -23,3 +23,6 @@ SAFE_TRAJ_MOVES = [
         ('-y',  [(2, -100), (3, -90)]),
         ('+z',  [(3,    0)]),
 ]
+
+# time to allow stage to settle (e.g. after a move, wait a short bit before querying actual position)
+ESP_SETTLE = 2  # seconds

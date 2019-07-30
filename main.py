@@ -12,7 +12,8 @@ from tshcal.inputs import argparser
 from tshcal.commanding import tsh_commands
 from tshcal.commanding import esp_commands
 from tshcal.common import buffer
-from tshcal.defaults import ROOT_DIR
+from tshcal.defaults import ROOT_DIR, DEFAULT_PORT
+from tshcal.common.buffer import Tsh, raw_data_from_socket
 
 
 def get_logger(log_file):
@@ -89,36 +90,23 @@ def wait_for_start_time(s, mod_logger):
     mod_logger.info('Faking that the calibration start time, %s, has been reached.  Begin calibrating now.' % s)
 
 
-def get_tsh_buffer_summary():
-    """this does nothing beyond demonstrate instantiation of Tsh and TshAccelBuffer with logging"""
+def get_tsh_buffer_summary(tsh, sec=3, logger=None):
+    """this does not much beyond demonstrate instantiation of TshAccelBuffer with logging"""
 
     # FIXME significant parts of this function are for quick demo purposes only, so scrub and fix
 
-    # fake/dummy arguments for buffer creating
-    sec = 1  # how many seconds-worth of TSH data (x,y,z acceleration values)
-    fs, k = 9.0, 0  # fake/dummy arguments for sample rate and gain
+    logger.info('Capturing quick data summary from tsh...')
 
-    # create data buffer -- at some pt in code before we need mean(counts), probably just after GSS min/max found
-    tsh = buffer.Tsh('tshes-44', fs, k)
-    buff = buffer.TshAccelBuffer(tsh, sec)
+    # create data buffer
+    buff = buffer.TshAccelBuffer(tsh, sec, logger=logger)
+    raw_data_from_socket(tsh.ip, buff, port=DEFAULT_PORT)  # this populates 2nd arg, buff
 
-    # add some data to buffer (note shape is Nx3, with 3 columns for xyz)
-    b = np.arange(6).reshape(2, 3)
-    buff.add(b)
+    logger.debug('Done capturing quick data summary from tsh.')
 
-    # add some data to buffer (note shape is Nx3, with 3 columns for xyz)
-    b = np.arange(9).reshape(3, 3)
-    buff.add(b)
-
-    # add some data to buffer (note shape is Nx3, with 3 columns for xyz)
-    b = np.arange(30).reshape(10, 3)
-    buff.add(b)
-
-    # buffer should be full by now, but let's try to add more data (should not be able to)
-    b = np.arange(60).reshape(20, 3)
-    buff.add(b)
-
-    return str(buff)
+    # FIXME should we do something smart about units?
+    s = 'QUICK SUMMARY...Mean: X = {:.3f}, Y = {:.3f}, Z = {:.3f} [units]'.format(*np.mean(buff.xyz, axis=0))
+    s += ' <-' * 17
+    return s
 
 
 def main():
@@ -132,6 +120,12 @@ def main():
 
     # get input arguments
     args = get_inputs(module_logger)
+
+    # FIXME design better tsh class to give more robustness (with commanding to set/get sample rate, gain, units, etc.)
+    # create tsh object
+    tsh = Tsh(args.sensor, args.rate, args.gain)
+
+    # FIXME verify the tsh object we created given desired input args matches what's physically hooked up
 
     # set tsh parameters
     tsh_state_desired = tsh_commands.set_tsh_state(args)
@@ -147,8 +141,9 @@ def main():
         raise AssertionError('The tsh actual state does NOT match our desired state.')
 
     # create buffer to capture few seconds' worth of TSH data and show user summary of what we got
-    summary = get_tsh_buffer_summary()
+    summary = get_tsh_buffer_summary(tsh, sec=3, logger=module_logger)
 
+    # show/log summary
     module_logger.info(summary)
 
     # FIXME Do we need to do anything prep/config for ESP here? (e.g. GENERAL MODE SELECTION or STATUS FUNCTIONS...
@@ -166,7 +161,7 @@ def main():
     wait_for_start_time(args.start, module_logger)
 
     # run calibration routine
-    esp_commands.run_cal()
+    esp_commands.run_cal(tsh)
 
     # FIXME are there any commands we need to send to TSH at this point after running calibration?
 
