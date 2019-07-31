@@ -155,6 +155,13 @@ def main(want_to_plot=True, debug_plot=True):
     # FIXME ... e.g. hit [Enter] if prompted-profile looks good OR give another keypress with chance to retry or...?
     # FIXME ** This should include whether or not debug/prompt-along-way is going to happen or not [auto- or semi-auto?]
 
+    # for now, just this crude prompt
+    ans = input("ESP rig at absolute home in all 3 axes (and other stuff initialized)?...Type [enter] for Yes, or [x] exit: ")
+    module_logger.info('User hit enter to indicate were are go.')
+    if ans == 'x':
+        module_logger.info('User aborted with [x] keypress.')
+        raise Exception('User aborted with [x] keypress.')
+
     # FIXME our flow chart shows 2 delays, but no smarts here yet to verify enough time for TSH temperature settling
 
     # delay until start time to begin calibration

@@ -104,12 +104,11 @@ class GoldenSectionSearch(object):
 
     def __str__(self):
         s = 'GSS(max)' if self._max else 'GSS(min)'
-        # 3 digits after decimal pt for angle; 9 for cosine (dummy) value since not yet working with counts
         for tup in zip(['a', 'c', 'd', 'b'], self._ginterval):
             s += '  ' + str(tup[0]) + ': '
-            s += '{:8.3f}, {:12.9f}'.format(*tup[1])
-        s += '  w:{:6.2f}'.format(self.width)  # width of overall interval in degrees
-        s += '  m:{:6.2f}'.format(self.mean)   # midpoint of overall interval in degrees
+            s += '{:.3f}, {:.4f}'.format(*tup[1])
+        s += '  w:{:.2f}'.format(self.width)  # width of overall interval in degrees
+        s += '  m:{:.2f}'.format(self.mean)   # midpoint of overall interval in degrees
         return s
 
     def get_interval(self):
@@ -229,11 +228,17 @@ def gss_two_axes(tsh, esp, out_dir, rough_home, want_to_plot=True, debug_plot=Fa
     rig_ax, amin, amax = two_rig_ax[1]
     gss_single_rig_ax(rough_home, tsh, esp, rig_ax, amin, amax, is_max, want_to_plot, debug_plot)
 
+    # create data buffer
+    tsh_buff = buffer.TshAccelBuffer(tsh, TSH_BUFFER_SEC, logger=module_logger)
+    buffer.raw_data_from_socket(tsh.ip, tsh_buff, port=DEFAULT_PORT)  # this populates 2nd arg, buff
+
     # save data to csv file
     bname = 'axes_tsh' + tsh.name.replace('s', 's-') + '_' + rough_home
     csv_file = os.path.join(out_dir, bname)
-    tsh_buff = buffer.TshAccelBuffer(tsh, TSH_BUFFER_SEC, logger=module_logger)
     tsh_buff.write_csv_in_counts(csv_file)
+
+    # move to this rough home before going to next rough home pos
+    move_to_rough_home(esp, rough_home)
 
 
 def move_axis(esp, ax, pos, tsh_settle=None, esp_settle=None):
@@ -466,13 +471,15 @@ def calibration(tsh, esp, out_dir, safe_moves=SAFE_TRAJ_MOVES, want_to_plot=True
         module_logger.info('Powered off ESP axis #%d.' % iax)
 
 
-def get_tsh_counts(tsh):
+def get_tsh_counts(tsh, sec=TSH_BUFFER_SEC):
     """Fill buffer with TSH data, compute mean and return 1x3 array for TSH x-, y- and z-axis.
 
     Parameters
     ----------
     tsh : obj
         The TSH "data source" object.
+    sec : float
+        The number of seconds of xyz data to get.
 
     Returns
     -------
@@ -481,15 +488,14 @@ def get_tsh_counts(tsh):
 
     """
 
-    # create data buffer
-    sec = TSH_BUFFER_SEC  # how many seconds-worth of TSH data (x,y,z acceleration values)
     module_logger.warning('ASSUMING the TSH is configured (sample rate, gain, and so on).')
 
     # create data buffer -- at some pt in code before we need mean(counts), probably just after GSS min/max found
     buff = buffer.TshAccelBuffer(tsh, sec, logger=module_logger)
     buffer.raw_data_from_socket(tsh.ip, buff, port=DEFAULT_PORT)  # this populates 2nd arg, buff
 
-    return np.mean(buff.xyz, axis=0)
+    # FIXME should this be median (instead of mean)?
+    return np.median(buff.xyz, axis=0)
 
 
 def move_rig_get_counts(esp, tsh, ax, a, idx_tsh_ax, plot_obj=None, debug=False):
@@ -551,3 +557,15 @@ def run_cal(tsh, out_dir, want_to_plot=True, debug_plot=False):
 
     # run calibration routine
     calibration(tsh, esp, out_dir, want_to_plot=want_to_plot, debug_plot=debug_plot)
+
+def demo_one():
+
+    # open communication with controller
+    esp = ESP('/dev/ttyUSB0')
+
+    move_to_rough_home(esp, '+x')
+    move_to_rough_home(esp, '-z')
+
+
+if __name__ == '__main__':
+    demo_one()

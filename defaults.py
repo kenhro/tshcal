@@ -11,11 +11,11 @@ from tshcal.common.time_utils import ceil_dtm
 DEFAULT_SENSOR = 'es14'   # use TSH-ES naming convention of "esXX" where XX is S/N digits
 DEFAULT_PORT = 9750       # for socket connection to accel server
 DEFAULT_RATE = 250.0      # samples/second
-DEFAULT_GAIN = 1          # the value (not the code)
+DEFAULT_GAIN = 1          # the value (or the code?)
 DEFAULT_UNITS = 'counts'  # {counts|volts|ug}
 TSH_AX = {'x': 0, 'y': 1, 'z': 2}  # map axis letter to index for TSH axes
-TSH_SETTLE_SEC = 0.5   # 5 # amount of time allocated for accelerometer to "settle" after a move & before reading
-TSH_BUFFER_SEC = 5  # 60  # amount of time to take mean (for example) with calibration find min/max
+TSH_SETTLE_SEC = 3        # amount of time allocated for accelerometer to "settle" after a move & before reading
+TSH_BUFFER_SEC = 60       # amount of time to take mean (for example) with calibration find min/max
 
 # ---------------------------------------------------------------------------------------------------------------------
 # --- TIME DEFAULTS ---------------------------------------------------------------------------------------------------

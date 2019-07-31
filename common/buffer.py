@@ -127,7 +127,7 @@ class TshAccelBuffer(object):
         print('writing spreadsheet data from %s buffer to %s' % (self.tsh.name, fname))
         np.savetxt(fname, self.xyz, delimiter=',')
 
-    def write_csv_in_counts(self, fname, fmt='%d'):
+    def write_csv_in_counts(self, fname, fmt='%.1f'):
         """write buffer (array) of XYZ counts to 3-column CSV (x,y,z)"""
         self.logger.info('Writing %s buffer to CSV file "%s".' % (self.tsh.name, fname))
         np.savetxt(fname, self.xyz, delimiter=',', fmt=fmt)
@@ -153,6 +153,7 @@ class TshAccelBuffer(object):
         self.idx = self.idx + offset
 
 
+# FIXME make this a method in TshAccelBuffer class
 def raw_data_from_socket(ip_addr, buff, port=9750):
     """establish socket connection to [tsh] (ip_addr)ess on data port (9750) and show pertinent data"""
 
@@ -302,7 +303,7 @@ def demo_buffer():
     module_logger.warning('ASSUMING the TSH is configured (sample rate, gain, and so on).')
 
     # create data buffer -- at some pt in code before we need mean(counts), probably just after GSS min/max found
-    tsh = Tsh('tshes-14', fs, k)
+    tsh = Tsh('es14', fs, k)
     buffer = TshAccelBuffer(tsh, sec)
 
     # add some data to buffer (note shape is Nx3, with 3 columns for xyz)
@@ -325,11 +326,7 @@ def demo_buffer():
 
     out_dir = 'c:/temp' if platform.system() == 'Windows' else '/tmp'
     csv_file = os.path.join(out_dir, 'foo.csv')
-
-    buffer.write_spreadsheet(csv_file)
-
-    npy_file = csv_file.replace('.csv', '.npy')
-    buffer.write_raw(npy_file)
+    buffer.write_csv_in_counts(csv_file, fmt='%.1f')
 
 
 def demo_proto():
@@ -357,4 +354,4 @@ def demo_proto():
 
 if __name__ == '__main__':
 
-    demo_proto()
+    demo_buffer()
