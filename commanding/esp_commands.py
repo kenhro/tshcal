@@ -175,9 +175,9 @@ class GoldenSectionSearch(object):
         for i in range(max_iters):
             self.update_interval()
             module_logger.info('{}  i:{:3d}'.format(self, i + 1))
-            if self.width < min_width:
-                module_logger.info('The interval width = %.4f is less than min_width = %.4f, so close enough!? %s' %
-                                   (self.width, min_width, '<' * 44))
+            if np.abs(self.width) < min_width:
+                module_logger.info('The abs interval width = %.4f is less than min_width = %.4f, so close enough!? %s' %
+                                   (np.abs(self.width), min_width, '<' * 44))
                 module_logger.info('GSS yield: {}'.format(self))
                 break
 
@@ -228,8 +228,9 @@ def gss_two_axes(tsh, esp, out_dir, rough_home, want_to_plot=True, debug_plot=Fa
     rig_ax, amin, amax = two_rig_ax[1]
     gss_single_rig_ax(rough_home, tsh, esp, rig_ax, amin, amax, is_max, want_to_plot, debug_plot)
 
+    # FIXME hard coded change in real-time so we don't have to watch paint dry
     # create data buffer
-    tsh_buff = buffer.TshAccelBuffer(tsh, TSH_BUFFER_SEC, logger=module_logger)
+    tsh_buff = buffer.TshAccelBuffer(tsh, 60, logger=module_logger)
     buffer.raw_data_from_socket(tsh.ip, tsh_buff, port=DEFAULT_PORT)  # this populates 2nd arg, buff
 
     # save data to csv file
@@ -258,6 +259,12 @@ def move_axis(esp, ax, pos, tsh_settle=None, esp_settle=None):
         module_logger.info('Let stage settle for %d sec.' % esp_settle)
         sleep(esp_settle)
 
+    # let's look at motor on query
+    mons = []
+    for m in range(1, 4):
+        mons.append(esp.query('MO', m))
+    module_logger.info("Motor status: %s." % str(mons))
+
     # get actual angle achieved from position attribute
     actual_pos = stage.position
 
@@ -265,6 +272,44 @@ def move_axis(esp, ax, pos, tsh_settle=None, esp_settle=None):
     module_logger.info("Done moving ESP axis = %d, now ACTUAL pos = %.4f." % (ax, actual_pos))
 
     # TODO what should we do here if difference between actual and desired position is more than some small tolerance?
+
+    count = 0
+    while np.abs(actual_pos - pos) > 0.05:
+        count += 1
+        if count > 2:
+            module_logger.info('Too may reposition attempts, abort.')
+            raise Exception('Too may reposition attempts, abort.')
+
+        module_logger.info("Retry #%d moving ESP axis = %d to pos = %.4f." % (count, ax, pos))
+
+        # move axis back a smidge from actual
+        stage.on()
+        stage.move_to(actual_pos - 1, True)  # if 2nd arg is True, then further execution blocked until move is complete
+
+        # get actual angle achieved from position attribute
+        actual_pos = stage.position
+
+        module_logger.info("Done moving ESP axis = %d back a smidge, now ACTUAL pos = %.4f." % (ax, actual_pos))
+
+        # move axis to desired position
+        stage.on()
+        stage.move_to(pos, True)  # if 2nd arg is True, then further execution blocked until move is completed
+
+        # allow stage to settle
+        if esp_settle:
+            module_logger.info('Let stage settle for %d sec.' % esp_settle)
+            sleep(esp_settle)
+
+        # let's look at motor on query
+        mons = []
+        for m in range(1, 4):
+            mons.append(esp.query('MO', m))
+        module_logger.info("Motor status: %s." % str(mons))
+
+        # get actual angle achieved from position attribute
+        actual_pos = stage.position
+
+        module_logger.info("Done retry moving ESP axis = %d, now ACTUAL pos = %.4f." % (ax, actual_pos))
 
     # pause if settle time (in seconds) for tsh is passed in
     if tsh_settle:
@@ -562,9 +607,7 @@ def demo_one():
 
     # open communication with controller
     esp = ESP('/dev/ttyUSB0')
-
-    move_to_rough_home(esp, '+x')
-    move_to_rough_home(esp, '-z')
+    move_to_rough_home(esp, '-y')
 
 
 if __name__ == '__main__':

@@ -14,7 +14,7 @@ TWO_RIG_AX_TO_MOVE = {
 ESP_AX = {'roll': 1, 'pitch': 2, 'yaw': 3}
 
 # move sequence for safe trajectories -- minimal moves for rough home to rough home transitions
-SAFE_TRAJ_MOVES = [
+ORIG_SAFE_TRAJ_MOVES = [
 #  rough_home   ax1   pos1, ax2 pos2, etc.
         ('+x',  [(2,    0)]),
         ('-z',  [(2,   80)]),
@@ -24,5 +24,18 @@ SAFE_TRAJ_MOVES = [
         ('+z',  [(3,    0)]),
 ]
 
+NEXT_SAFE_TRAJ_MOVES = [
+#  rough_home   ax1   pos1, ax2 pos2, etc.
+        ('+y',  [(3,  -90)]),
+        ('-x',  [(2,  170)]),
+        ('-y',  [(2, -100), (3, -90)]),
+        ('+z',  [(3,    0)]),
+]
+
+SAFE_TRAJ_MOVES = [
+#  rough_home   ax1   pos1, ax2 pos2, etc.
+        ('+z',  [(3,    0)]),
+]
+
 # time to allow stage to settle (e.g. after a move, wait a short bit before querying actual position)
-ESP_SETTLE = 2  # seconds
+ESP_SETTLE = 3  # seconds
