@@ -127,9 +127,10 @@ class TshAccelBuffer(object):
         print('writing spreadsheet data from %s buffer to %s' % (self.tsh.name, fname))
         np.savetxt(fname, self.xyz, delimiter=',')
 
-    def write_raw(self, fname):
-        print('writing raw data from %s buffer to %s' % (self.tsh.name, fname))
-        np.save(fname, self.xyz)
+    def write_csv_in_counts(self, fname, fmt='%d'):
+        """write buffer (array) of XYZ counts to 3-column CSV (x,y,z)"""
+        self.logger.info('Writing %s buffer to CSV file "%s".' % (self.tsh.name, fname))
+        np.savetxt(fname, self.xyz, delimiter=',', fmt=fmt)
 
     def add(self, more):
 

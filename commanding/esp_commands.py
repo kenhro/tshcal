@@ -229,10 +229,11 @@ def gss_two_axes(tsh, esp, out_dir, rough_home, want_to_plot=True, debug_plot=Fa
     rig_ax, amin, amax = two_rig_ax[1]
     gss_single_rig_ax(rough_home, tsh, esp, rig_ax, amin, amax, is_max, want_to_plot, debug_plot)
 
-    # save data for this axis to file
+    # save data to csv file
     bname = 'axes_tsh' + tsh.name.replace('s', 's-') + '_' + rough_home
-    data_file = os.path.join(out_dir, bname)
-    module_logger.info('Save data to file %s.' % data_file)
+    csv_file = os.path.join(out_dir, bname)
+    tsh_buff = buffer.TshAccelBuffer(tsh, TSH_BUFFER_SEC, logger=module_logger)
+    tsh_buff.write_csv_in_counts(csv_file)
 
 
 def move_axis(esp, ax, pos, tsh_settle=None, esp_settle=None):
