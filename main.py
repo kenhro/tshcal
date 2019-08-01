@@ -1,5 +1,26 @@
 #!/usr/bin/env python3
 
+# TODO how best to not clobber CSV output files
+
+# TODO think through and implement where data gets saved and log file handling (rotation?)
+
+# TODO can we write to Eric spreadsheet template directly?
+
+# TODO improve initial prompt for go/no-go decision
+
+# TODO all of the TSH commanding (set/get config is primary objective for now)
+
+# TODO have TshAccelBuffer natively include some form of raw_data_from_socket and maybe selected signal proc. methods
+
+# TODO implement new feature with ability to start somewhere besides +x and progress thru abbrev. sequence after that...
+# TODO ...BUT this requires special initialization for position to *previous* rough home
+
+# TODO add another buffer duration, so (1) for final output file (60sec), & new shorter one for (2) GSS angles/visits
+
+# TODO fix the move_to code for robustness against not getting actual position to desired (motor on forcing)
+
+# TODO add PGA and ELECT testing and output files
+
 import os
 import sys
 import time

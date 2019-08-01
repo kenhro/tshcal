@@ -47,9 +47,9 @@ Add additional notes about how to deploy this on a representative system
 
 ## Authors
 
-* **Eric Kelly** - *Put some high-level words here.*
-* **Will Brown** - *Better words for summer work at NASA goes here.*
-* **Ken Hrovat** - *High-level words here.*
+* **Ken Hrovat** - *Designed framework and worked some of the nuts and bolts.*
+* **Eric Kelly** - *Provided a sixth sense with ESP.*
+* **Will Brown** - *Interning for summer at NASA GRC from Strongsville High School.*
 
 ## License
 
