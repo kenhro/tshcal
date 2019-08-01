@@ -15,7 +15,8 @@ DEFAULT_GAIN = 1          # the value (or the code?)
 DEFAULT_UNITS = 'counts'  # {counts|volts|ug}
 TSH_AX = {'x': 0, 'y': 1, 'z': 2}  # map axis letter to index for TSH axes
 TSH_SETTLE_SEC = 3        # amount of time allocated for accelerometer to "settle" after a move & before reading
-TSH_BUFFER_SEC = 20       # amount of time to take mean (for example) with calibration find min/max
+TSH_BUFFER_SEC = 20       # amount of time to take median (for example) with calibration find min/max
+AXES_FILE_SEC = 60        # amount of time to gather data and write to CSV output file when cal is done for a given axis
 
 # ---------------------------------------------------------------------------------------------------------------------
 # --- TIME DEFAULTS ---------------------------------------------------------------------------------------------------
@@ -41,5 +42,6 @@ ROUGH_HOMES = {
         '+z':  (0, -100,   0),
         '-z':  (0,   80,   0),
 }
+
 # empirically-derived order for rough homes transition trajectories so that cables and such are nicely kept
-NICE_ORDER = ['+x', '-z', '+y', '-x', '-y', '+z']  # this is order with which to visit each rough home pos
+#NICE_ORDER = ['+x', '-z', '+y', '-x', '-y', '+z']  # this is order with which to visit each rough home pos

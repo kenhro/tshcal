@@ -13,10 +13,10 @@ from dateutil import parser as dparser
 from tshcal.defaults import DEFAULT_OUTDIR
 from tshcal.defaults import DEFAULT_SENSOR, DEFAULT_RATE, DEFAULT_GAIN
 from tshcal.defaults import DEFAULT_START
-from tshcal.common.file_utils import get_basename_noext
+
 
 # create logger
-module_logger = logging.getLogger('tshcal.%s' % get_basename_noext(__file__))
+module_logger = logging.getLogger('tshcal')
 
 
 def folder_str(f):
@@ -34,7 +34,7 @@ def outdir_str(d):
         if not os.path.exists(logs_dir):
             os.makedirs(logs_dir)
     except OSError:
-        raise argparse.ArgumentTypeError('could not create "%s" directory' % logs_dir)
+        raise argparse.ArgumentTypeError('could not create "%s" directory for logs' % logs_dir)
     return f
 
 
@@ -109,7 +109,7 @@ def parse_inputs():
     help_sensor = "sensor; default is %s" % DEFAULT_SENSOR
     parser.add_argument('-s', '--sensor', default=DEFAULT_SENSOR, type=sensor_str, help=help_sensor)
 
-    # output directory
+    # output directory (mainly for csv output files)
     help_outdir = 'output dir; default is %s' % DEFAULT_OUTDIR
     parser.add_argument('-o', '--outdir', default=DEFAULT_OUTDIR, type=outdir_str, help=help_outdir)
 

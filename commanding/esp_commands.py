@@ -17,7 +17,7 @@ from tshcal.constants_esp import SAFE_TRAJ_MOVES
 from tshcal.constants_esp import TWO_RIG_AX_TO_MOVE, ESP_SETTLE
 from tshcal.commanding.plot_progress import GoalProgressPlot
 from tshcal.constants_esp import ESP_AX
-from tshcal.defaults import TSH_SETTLE_SEC, TSH_BUFFER_SEC
+from tshcal.defaults import TSH_SETTLE_SEC, TSH_BUFFER_SEC, AXES_FILE_SEC
 from tshcal.common import buffer
 
 
@@ -228,14 +228,18 @@ def gss_two_axes(tsh, esp, out_dir, rough_home, want_to_plot=True, debug_plot=Fa
     rig_ax, amin, amax = two_rig_ax[1]
     gss_single_rig_ax(rough_home, tsh, esp, rig_ax, amin, amax, is_max, want_to_plot, debug_plot)
 
-    # FIXME hard coded change in real-time so we don't have to watch paint dry
     # create data buffer
-    tsh_buff = buffer.TshAccelBuffer(tsh, 60, logger=module_logger)
-    buffer.raw_data_from_socket(tsh.ip, tsh_buff, port=DEFAULT_PORT)  # this populates 2nd arg, buff
+    tsh_buff = buffer.TshAccelBuffer(tsh, AXES_FILE_SEC, logger=module_logger)
+    buffer.raw_data_from_socket(tsh.ip, tsh_buff, port=DEFAULT_PORT)  # this populates 2nd arg, tsh_buff
 
     # save data to csv file
     bname = 'axes_tsh' + tsh.name.replace('s', 's-') + '_' + rough_home
     csv_file = os.path.join(out_dir, bname)
+
+    # FIXME how best to not clobber CSV output files???
+    # make sure we are not clobbering pre-existing csv file
+
+    # now write results to csv file
     tsh_buff.write_csv_in_counts(csv_file)
 
     # move to this rough home before going to next rough home pos

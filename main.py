@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
+# TODO from jump we need to check out_dir exists and we can create subdir for logs there [do we pass out_dir with args?]
+
 # TODO how best to not clobber CSV output files
 
-# TODO think through and implement where data gets saved and log file handling (rotation?)
+# TODO think through and implement where data in *general* gets saved and log file handling (rotation?)
 
 # TODO can we write to Eric spreadsheet template directly?
 
