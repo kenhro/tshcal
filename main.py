@@ -32,6 +32,7 @@ import logging.config
 import numpy as np
 
 from tshcal.inputs import argparser
+from tshcal.inputs import user_menu
 from tshcal.commanding import tsh_commands
 from tshcal.commanding import esp_commands
 from tshcal.common import buffer
@@ -50,18 +51,18 @@ def get_logger(log_file):
     fh = logging.FileHandler(log_file)
     fh.setLevel(logging.DEBUG)
 
-    # create console handler with a higher log level
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)  # changed from ERROR to INFO
+    # # create console handler with a higher log level
+    # ch = logging.StreamHandler()
+    # ch.setLevel(logging.INFO)  # changed from ERROR to INFO
 
     # create formatter and add it to the handlers
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(module)s : %(lineno)d - %(message)s')
     fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
+    # ch.setFormatter(formatter)
 
     # add the handlers to the logger
     logger.addHandler(fh)
-    logger.addHandler(ch)
+    # logger.addHandler(ch)
 
     return logger
 
@@ -143,6 +144,10 @@ def main(want_to_plot=True, debug_plot=True):
 
     # get input arguments
     args = get_inputs(module_logger)
+
+    # prompt user to follow along with logging in new terminal
+    prompt_str = 'Start new term with "tail -f %s" to watch logging, then come back here & answer prompt.' % log_file
+    user_menu.prompt_user(prompt_str)
 
     # FIXME design better tsh class to give more robustness (with commanding to set/get sample rate, gain, units, etc.)
     # create tsh object
