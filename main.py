@@ -30,6 +30,7 @@ import datetime
 import logging
 import logging.config
 import numpy as np
+import multiprocessing
 
 from tshcal.inputs import argparser
 from tshcal.inputs import user_menu
@@ -114,7 +115,7 @@ def wait_for_start_time(s, mod_logger):
     mod_logger.info('Faking that the calibration start time, %s, has been reached.  Begin calibrating now.' % s)
 
 
-def get_tsh_buffer_summary(tsh, sec=3, logger=None):
+def show_tsh_buffer_summary(tsh, sec=3, logger=None):
     """this does not much beyond demonstrate instantiation of TshAccelBuffer with logging"""
 
     # FIXME significant parts of this function are for quick demo purposes only, so scrub and fix
@@ -130,7 +131,9 @@ def get_tsh_buffer_summary(tsh, sec=3, logger=None):
     # FIXME should we do something smart about units?
     s = 'QUICK SUMMARY...Mean: X = {:.3f}, Y = {:.3f}, Z = {:.3f} [units]'.format(*np.mean(buff.xyz, axis=0))
     s += ' <-' * 17
-    return s
+
+    # show/log summary
+    logger.info(s)
 
 
 def main(want_to_plot=True, debug_plot=True):
@@ -146,33 +149,58 @@ def main(want_to_plot=True, debug_plot=True):
     args = get_inputs(module_logger)
 
     # prompt user to follow along with logging in new terminal
-    prompt_str = 'Start new term with "tail -f %s" to watch logging, then come back here & answer prompt.' % log_file
-    user_menu.prompt_user(prompt_str)
+    prompt_str = 'Start new log term w/ "tail -f %s" to watch logging, then back to cmd term for prompts.' % log_file
+    ans = user_menu.prompt_user(prompt_str)
+    if ans == 0:
+        module_logger.info('bye')
+        sys.exit(-1)
 
-    # FIXME design better tsh class to give more robustness (with commanding to set/get sample rate, gain, units, etc.)
-    # create tsh object
+    # TODO design tsh class that gives robustness (with commanding to set/get sample rate, gain, units, etc.)
+    # create tsh object FIXME << this is a dummy for now
     tsh = Tsh(args.sensor, args.rate, args.gain)
 
-    # FIXME verify the tsh object we created given desired input args matches what's physically hooked up
+    # FIXME for now, just squawk about not having Tsh class to handle get/set commanding or querying state
+    module_logger.info('SKIPPING TSH SET/GET SINCE NO GOOD Tsh CLASS YET.')
+    if False:
+        # FIXME this indented block under "if False" should eventually get unindented to actually be employed
 
-    # set tsh parameters
-    tsh_state_desired = tsh_commands.set_tsh_state(args)
+        # FIXME verify the tsh object we created given desired input args matches what's physically hooked up
 
-    # get tsh parameters
-    tsh_state_actual = tsh_commands.get_tsh_state()
+        # set tsh parameters
+        tsh_state_desired = tsh_commands.set_tsh_state(args)
 
-    # verify tsh parameters
-    if tsh_state_actual == tsh_state_desired:
-        module_logger.debug('The tsh actual state matches our desired state.')
-    else:
-        # TODO give more info here -- what exactly does not match?
-        raise AssertionError('The tsh actual state does NOT match our desired state.')
+        # get tsh parameters
+        tsh_state_actual = tsh_commands.get_tsh_state()
 
-    # create buffer to capture few seconds' worth of TSH data and show user summary of what we got
-    summary = get_tsh_buffer_summary(tsh, sec=3, logger=module_logger)
+        # verify tsh parameters
+        if tsh_state_actual == tsh_state_desired:
+            module_logger.debug('The tsh actual state matches our desired state.')
+        else:
+            # TODO give more info here -- what exactly does not match?
+            raise AssertionError('The tsh actual state does NOT match our desired state.')
 
-    # show/log summary
-    module_logger.info(summary)
+    # create buffer to capture 2 seconds of TSH data and show user a summary of what we got (do as process for timeout)
+    buff_sec = 2
+    p = multiprocessing.Process(target=show_tsh_buffer_summary,
+                                args=(tsh, ),
+                                kwargs={'sec': buff_sec, 'logger': module_logger})
+    p.start()
+
+    # wait for double buff_sec or until process finishes
+    p.join(buff_sec * 2)
+
+    # if thread still active for too long
+    if p.is_alive():
+        timeout_msg = 'Call show_tsh_buffer_summary (%d sec) still running after %d sec...' % (buff_sec, buff_sec * 2)
+        timeout_msg += 'Too long, something wrong?...Kill it!'
+        module_logger.info(timeout_msg)
+
+        p.terminate()
+        p.join()
+
+        module_logger.info('Why did it take %d seconds or more to fill a %d-second TSH buffer?' %
+                           (buff_sec * 2, buff_sec))
+        sys.exit(-2)
 
     # FIXME Do we need to do anything prep/config for ESP here? (e.g. GENERAL MODE SELECTION or STATUS FUNCTIONS...
     # FIXME ...maybe from Table 3.5.1 of ESP301 User Guide or possibly something else)?  Will may have answered this?
