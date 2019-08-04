@@ -39,15 +39,15 @@ def outdir_str(d):
 
 
 def rate_str(r):
-    """return valid sample rate (sa/sec) as int value converted from string, r"""
+    """return valid sample rate (sa/sec) as float value converted from string, r"""
     try:
-        value = int(r)
+        value = float(r)
     except Exception as e:
         raise argparse.ArgumentTypeError('%s' % e)
 
-    # TODO replace next 2 lines so that we raise error for any input besides our specific TSH-ES sample rates
-    # TODO maybe use "not in" syntax for this
-    # TODO see SAMS-SPC-005 Rev A "SAMS Data & Command Format Definitions: Developers Edition"
+    # FIXME replace next 2 lines so that we raise error for any input besides our specific TSH-ES sample rates
+    # FIXME maybe use "not in" syntax for this
+    # FIXME see SAMS-SPC-005 Rev A "SAMS Data & Command Format Definitions: Developers Edition"
     if value < 1 or value > 999:
         raise argparse.ArgumentTypeError('rate, r, in sa/sec must be such that 1 <= r <= 999')
 

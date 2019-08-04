@@ -7,11 +7,11 @@ from collections import deque
 from tshcal.defaults import TSH_BUFFER_SEC, TSH_SETTLE_SEC, TSH_AX
 from tshcal.commanding.tsh_commands import fake_query_tsh_sample_rate
 
-# TODO notice next 2 lines are fast way to initialize array to all NaNs
-a = np.empty((100, 100))  # NOTE: this will contain garbage values
-a.fill(np.nan)            # NOTE: this cleans up garbage values, replacing with NaNs
-print(a)
-raise SystemExit
+# # TODO notice next 2 lines are fast way to initialize array to all NaNs
+# a = np.empty((100, 100))  # NOTE: this will contain garbage values
+# a.fill(np.nan)            # NOTE: this cleans up garbage values, replacing with NaNs
+# print(a)
+# raise SystemExit
 
 np.random.seed(42)  # for repeatable random values
 
