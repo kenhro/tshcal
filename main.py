@@ -27,6 +27,7 @@ import os
 import sys
 import time
 import datetime
+import platform
 import logging
 import logging.config
 import numpy as np
@@ -148,10 +149,6 @@ def main():
     # get input arguments
     args = get_inputs(module_logger)
 
-    print(args)
-
-    raise SystemExit
-
     # prompt user to follow along with logging in new terminal
     prompt_str = 'Start new log term w/ "tail -f %s" to see logging, then back to this cmd term for prompts.' % log_file
     ans = user_menu.prompt_user(prompt_str)
@@ -184,29 +181,36 @@ def main():
             # TODO give more info here -- what exactly does not match?
             raise AssertionError('The tsh actual state does NOT match our desired state.')
 
-    # FIXME this next multiprocessing feature does not work on mac os
-    # create buffer to capture 2 seconds of TSH data and show user a summary of what we got (do as process for timeout)
-    buff_sec = 2
-    p = multiprocessing.Process(target=show_tsh_buffer_summary,
-                                args=(tsh, ),
-                                kwargs={'sec': buff_sec, 'logger': module_logger})
-    p.start()
+    # if OS allows, then we can do quick tsh data check (must be linux)
+    pform = platform.platform()
+    if pform.lower().startswith('linux'):
 
-    # wait for double buff_sec or until process finishes
-    p.join(buff_sec * 2)
+        # FIXME this next multiprocessing feature does not work on mac os
+        # create buffer to capture 2 seconds of TSH data and show user a summary of what we got (do as process for timeout)
+        buff_sec = 2
+        p = multiprocessing.Process(target=show_tsh_buffer_summary,
+                                    args=(tsh, ),
+                                    kwargs={'sec': buff_sec, 'logger': module_logger})
+        p.start()
 
-    # if thread still active, that is, active for too long, then we log it and quit out
-    if p.is_alive():
-        timeout_msg = 'Call show_tsh_buffer_summary (%d sec) still running after %d sec...' % (buff_sec, buff_sec * 2)
-        timeout_msg += 'Too long, something wrong?...Kill it!'
-        module_logger.info(timeout_msg)
+        # wait for double buff_sec or until process finishes
+        p.join(buff_sec * 2)
 
-        p.terminate()
-        p.join()
+        # if thread still active, that is, active for too long, then we log it and quit out
+        if p.is_alive():
+            timeout_msg = 'Call show_tsh_buffer_summary (%d sec) still running after %d sec...' % (buff_sec, buff_sec * 2)
+            timeout_msg += 'Too long, something wrong?...Kill it!'
+            module_logger.info(timeout_msg)
 
-        module_logger.info('Why did it take %d seconds or more to fill a %d-second TSH buffer?' %
-                           (buff_sec * 2, buff_sec))
-        sys.exit(-2)
+            p.terminate()
+            p.join()
+
+            module_logger.info('Why did it take %d seconds or more to fill a %d-second TSH buffer?' %
+                               (buff_sec * 2, buff_sec))
+            sys.exit(-2)
+
+    else:
+        module_logger.info('Skip quick tsh data test since OS is not Linux.')
 
     # FIXME Do we need to do anything prep/config for ESP here? (e.g. GENERAL MODE SELECTION or STATUS FUNCTIONS...
     # FIXME ...maybe from Table 3.5.1 of ESP301 User Guide or possibly something else)?  Will may have answered this?
@@ -217,12 +221,13 @@ def main():
     # FIXME ... e.g. hit [Enter] if prompted-profile looks good OR give another keypress with chance to retry or...?
     # FIXME ** This should include whether or not debug/prompt-along-way is going to happen or not [auto- or semi-auto?]
 
-    # for now, just this crude prompt
-    ans = input("ESP rig at absolute home in all 3 axes (and other stuff initialized)?...Type [enter] for Yes, or [x] exit: ")
-    module_logger.info('User hit enter to indicate were are go.')
-    if ans == 'x':
-        module_logger.info('User aborted with [x] keypress.')
-        raise Exception('User aborted with [x] keypress.')
+    # offer enough prompt info for user to make go/no-go decision...but for now, just this crude prompt
+    prompt_str = 'ESP rig at absolute home in all 3 axes (and other stuff initialized)?'
+    ans_go = user_menu.prompt_user(prompt_str)
+    # if user chose zero to quit early, then do a graceful exit
+    if ans_go == 0:
+        module_logger.info('User aborted at go/no-go decision prompt.')
+        sys.exit(-3)
 
     # FIXME our flow chart shows 2 delays, but no smarts here yet to verify enough time for TSH temperature settling
 
@@ -230,7 +235,7 @@ def main():
     wait_for_start_time(args.start, module_logger)
 
     # run calibration routine
-    esp_commands.run_cal(tsh, args.outdir, want_to_plot=args.want_plot, debug_plot=args.debug_plot)
+    esp_commands.run_cal(tsh, args.outdir, plot=args.plot, debug=args.debug)
 
     # FIXME are there any commands we need to send to TSH at this point after running calibration?
 

@@ -182,13 +182,13 @@ class GoldenSectionSearch(object):
                 break
 
 
-def gss_single_rig_ax(rough_home, tsh, esp, rig_ax, amin, amax, is_max, want_to_plot, debug_plot):
+def gss_single_rig_ax(rough_home, tsh, esp, rig_ax, amin, amax, is_max, plot, debug):
 
     module_logger.info("Near %s, performing GSS for rig_ax = %s, amin = %.4f, amax = %.4f." %
                        (rough_home, rig_ax, amin, amax))
 
     # if we want to plot, then need an object to handle plotting our points
-    if want_to_plot:
+    if plot:
         # initialize and setup plot
         gpp = GoalProgressPlot(rig_ax)
         gpp.setup_plot()
@@ -196,21 +196,21 @@ def gss_single_rig_ax(rough_home, tsh, esp, rig_ax, amin, amax, is_max, want_to_
     else:
         plot_obj = None
 
-    # FIXME we have not incorporated debug_plot feature yet (just going to hard code as debugging for now)
+    # FIXME we have not incorporated debug feature yet (just going to hard code as debugging for now)
 
     # run search, which MOVES THE RIG (possibly plot results or prompting user along the way)
-    gs = GoldenSectionSearch(rough_home, tsh, esp, amin, amax, rig_ax, max=is_max, plot=plot_obj, debug=debug_plot)
+    gs = GoldenSectionSearch(rough_home, tsh, esp, amin, amax, rig_ax, max=is_max, plot=plot_obj, debug=debug)
     gs.four_initial_moves()
     module_logger.info('{}  i:{:3d}'.format(gs, 0))
     gs.auto_run()
     plt.close(gpp.fig)
 
 
-def gss_two_axes(tsh, esp, out_dir, rough_home, want_to_plot=True, debug_plot=False):
+def gss_two_axes(tsh, esp, out_dir, rough_home, plot=True, debug=False):
 
     # # FIXME get these info (from parsing command line args?)
-    # want_to_plot = True
-    # debug_plot = True
+    # plot = True
+    # debug = True
 
     # for given rough home position, get the 2 rig axes/ranges to be moved in succession for finding min/max
     two_rig_ax = TWO_RIG_AX_TO_MOVE[rough_home]
@@ -221,12 +221,12 @@ def gss_two_axes(tsh, esp, out_dir, rough_home, want_to_plot=True, debug_plot=Fa
     # find min/max for first of 2 rig axes (run gss on it)
     module_logger.info('Find min/max for 1st of 2 rig axes for %s are %s.' % (rough_home, two_rig_ax))
     rig_ax, amin, amax = two_rig_ax[0]
-    gss_single_rig_ax(rough_home, tsh, esp, rig_ax, amin, amax, is_max, want_to_plot, debug_plot)
+    gss_single_rig_ax(rough_home, tsh, esp, rig_ax, amin, amax, is_max, plot, debug)
 
     # find min/max for 2nd of 2 rig axes (run gss on it)
     module_logger.info('Find min/max for 2nd of 2 rig axes for %s are %s.' % (rough_home, two_rig_ax))
     rig_ax, amin, amax = two_rig_ax[1]
-    gss_single_rig_ax(rough_home, tsh, esp, rig_ax, amin, amax, is_max, want_to_plot, debug_plot)
+    gss_single_rig_ax(rough_home, tsh, esp, rig_ax, amin, amax, is_max, plot, debug)
 
     # create data buffer
     tsh_buff = buffer.TshAccelBuffer(tsh, AXES_FILE_SEC, logger=module_logger)
@@ -352,7 +352,7 @@ def move_to_rough_home(esp, rig_ax):
     return actual_roll, actual_pitch, actual_yaw
 
 
-def move_to_rough_home_do_gss(tsh, esp, out_dir, rhome, axpos, want_to_plot=True, debug_plot=False):
+def move_to_rough_home_do_gss(tsh, esp, out_dir, rhome, axpos, plot=True, debug=False):
     """move to rough home, rhome, via (ax, pos) values in axpos tuple"""
 
     module_logger.info('Go to rough home %s for calibration.' % rhome)
@@ -365,7 +365,7 @@ def move_to_rough_home_do_gss(tsh, esp, out_dir, rhome, axpos, want_to_plot=True
 
     # do gss for each of two "other" axes when at this rough home position, rhome
     module_logger.info('Doing gss for %s.' % rhome)  # gss to do data collect, tsh settle & writes
-    gss_two_axes(tsh, esp, out_dir, rhome, want_to_plot=want_to_plot, debug_plot=debug_plot)
+    gss_two_axes(tsh, esp, out_dir, rhome, plot=plot, debug=debug)
 
     # data collection for rhome
     # FIXME we have not gotten to this point yet!
@@ -503,12 +503,12 @@ def refact3(esp):
 
 
 # TODO compare this calibration function to refact3 routine above
-def calibration(tsh, esp, out_dir, safe_moves=SAFE_TRAJ_MOVES, want_to_plot=True, debug_plot=False):
+def calibration(tsh, esp, out_dir, safe_moves=SAFE_TRAJ_MOVES, plot=True, debug=False):
     """return status/exit code that results from attempt to run calibration given motion controller object, esp"""
 
     # iterate over rough homes for cal in safe manner; empirically-derived trajectories that nicely keep cables, etc.
     for rhome, moves in safe_moves:
-        move_to_rough_home_do_gss(tsh, esp, out_dir, rhome, moves, want_to_plot=want_to_plot, debug_plot=debug_plot)  # min/max search & write results
+        move_to_rough_home_do_gss(tsh, esp, out_dir, rhome, moves, plot=plot, debug=debug)  # min/max search & write results
 
     # move back to +x rough home for convenience
     module_logger.info('Finished calibration, so park at +x rough home.')
@@ -598,14 +598,14 @@ def move_rig_get_counts(esp, tsh, ax, a, idx_tsh_ax, plot_obj=None, debug=False)
     return avg_counts
 
 
-def run_cal(tsh, out_dir, want_to_plot=True, debug_plot=False):
+def run_cal(tsh, out_dir, plot=True, debug=False):
     """a fake/placeholder for now, but actual code will be fairly simple and probably alot like what's shown here"""
 
     # open communication with controller
     esp = ESP('/dev/ttyUSB0')
 
     # run calibration routine
-    calibration(tsh, esp, out_dir, want_to_plot=want_to_plot, debug_plot=debug_plot)
+    calibration(tsh, esp, out_dir, plot=plot, debug=debug)
 
 def demo_one():
 
