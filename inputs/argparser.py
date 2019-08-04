@@ -117,6 +117,25 @@ def parse_inputs():
     help_start = 'start time; default is %s' % DEFAULT_START
     parser.add_argument('-t', '--start', default=DEFAULT_START, type=start_str, help=help_start)
 
+    # fake ESP
+    parser.add_argument('--fake_esp', dest='fake_esp', action='store_true')
+    parser.add_argument('--real_esp', dest='fake_esp', action='store_false')
+
+    # fake TSH
+    parser.add_argument('--fake_tsh', dest='fake_tsh', action='store_true')
+    parser.add_argument('--real_tsh', dest='fake_tsh', action='store_false')
+
+    # want plot
+    parser.add_argument('--plot', dest='plot', action='store_true')
+    parser.add_argument('--no_plot', dest='plot', action='store_false')
+
+    # debug mode
+    parser.add_argument('--debug', dest='debug', action='store_true')
+    parser.add_argument('--no_debug', dest='debug', action='store_false')
+
+    # set defaults for some booleans (done in canonical fashion)
+    parser.set_defaults(fake_esp=False, fake_tsh=False, plot=True, debug=False)
+
     # FIXME we do not check that log directory seen in log_conf_file matches relative to outdir, assumed this above
 
     # parse arguments

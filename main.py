@@ -136,8 +136,8 @@ def show_tsh_buffer_summary(tsh, sec=3, logger=None):
     logger.info(s)
 
 
-def main(want_to_plot=True, debug_plot=True):
-    """return status/exit code that results from running main tshcal application"""
+def main():
+    """return status/exit code that results from running tshcal main application"""
 
     # create logger
     log_file = os.path.join(ROOT_DIR, 'logging', 'tshcal.log')
@@ -148,9 +148,14 @@ def main(want_to_plot=True, debug_plot=True):
     # get input arguments
     args = get_inputs(module_logger)
 
+    print(args)
+
+    raise SystemExit
+
     # prompt user to follow along with logging in new terminal
-    prompt_str = 'Start new log term w/ "tail -f %s" to watch logging, then back to cmd term for prompts.' % log_file
+    prompt_str = 'Start new log term w/ "tail -f %s" to see logging, then back to this cmd term for prompts.' % log_file
     ans = user_menu.prompt_user(prompt_str)
+    # if user chose zero to quit early, then do a graceful exit
     if ans == 0:
         module_logger.info('bye')
         sys.exit(-1)
@@ -179,6 +184,7 @@ def main(want_to_plot=True, debug_plot=True):
             # TODO give more info here -- what exactly does not match?
             raise AssertionError('The tsh actual state does NOT match our desired state.')
 
+    # FIXME this next multiprocessing feature does not work on mac os
     # create buffer to capture 2 seconds of TSH data and show user a summary of what we got (do as process for timeout)
     buff_sec = 2
     p = multiprocessing.Process(target=show_tsh_buffer_summary,
@@ -189,7 +195,7 @@ def main(want_to_plot=True, debug_plot=True):
     # wait for double buff_sec or until process finishes
     p.join(buff_sec * 2)
 
-    # if thread still active for too long
+    # if thread still active, that is, active for too long, then we log it and quit out
     if p.is_alive():
         timeout_msg = 'Call show_tsh_buffer_summary (%d sec) still running after %d sec...' % (buff_sec, buff_sec * 2)
         timeout_msg += 'Too long, something wrong?...Kill it!'
@@ -224,7 +230,7 @@ def main(want_to_plot=True, debug_plot=True):
     wait_for_start_time(args.start, module_logger)
 
     # run calibration routine
-    esp_commands.run_cal(tsh, args.outdir, want_to_plot=want_to_plot, debug_plot=debug_plot)
+    esp_commands.run_cal(tsh, args.outdir, want_to_plot=args.want_plot, debug_plot=args.debug_plot)
 
     # FIXME are there any commands we need to send to TSH at this point after running calibration?
 
@@ -235,4 +241,4 @@ def main(want_to_plot=True, debug_plot=True):
 
 if __name__ == '__main__':
 
-    sys.exit(main(want_to_plot=True, debug_plot=False))
+    sys.exit(main())
