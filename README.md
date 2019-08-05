@@ -45,6 +45,21 @@ Give an example
 
 Add additional notes about how to deploy this on a representative system
 
+1. Mount TSH to calibration fixture plate.
+2. Verify cable clearances and no physical obstructions.
+3. Verify shim/angle such that controller can reach vertical/anti-vertical.
+4. Power on TSH
+5. Power on ESP
+6. Load session config/settings
+7. Make TSH adjustments for this session
+8. Wait for prescribed start time
+9. Go to first rough home position
+10. Use golden section search routine to find extreme (min or max) counts for this position
+11. Move to next rough home position
+12. Repeat steps 9 and 10 until all 6 positions are completed
+13. Format results in a way that facilitates downstream processing/analysis
+14. Save results to file
+
 ## Authors
 
 * **Ken Hrovat** - *Designed framework and worked some of the nuts and bolts.*
@@ -66,7 +81,7 @@ Use the Python programming language to control a 3-axis ESP motion-controlled ri
 ### Roadmap
 
 - [x] Update docs, especially the spreadsheet there, to reflect latest version of SAMS Data & Command Format Definitions: Developers Edition (which is SAMS-SPC-005 Rev C).
-- [ ] Determine how to orchestrate moves from "rough home" position through various trajectories and waypoints for full cal sequence.  Mind cables and mechanical stops.
-- [ ] For a given sensor axis/orientation (+X, -X, +Y, -Y, +Z or -Z), determine which 2 of the rig axes (yaw, pitch, roll) needed to find min/max counts.
+- [x] Determine how to orchestrate moves from "rough home" position through various trajectories and waypoints for full cal sequence.  Mind cables and mechanical stops.
+- [x] For a given sensor axis/orientation (+X, -X, +Y, -Y, +Z or -Z), determine which 2 of the rig axes (yaw, pitch, roll) needed to find min/max counts.
 - [ ] Goal is to handle TSH commanding, housekeeping and acceleration data and control 3-axis motion-control rig for calibration.  **Commanding Example**: set TSH sample rate. **Housekeeping Example**: get TSH gain setting. **Acceleration Data Example**: read acceleration values from sensor for min/max search.
   
