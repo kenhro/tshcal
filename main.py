@@ -151,7 +151,8 @@ def main():
 
     # prompt user to follow along with logging in new terminal
     prompt_str = 'Start new log term w/ "tail -f %s" to see logging, then back to this cmd term for prompts.' % log_file
-    ans = user_menu.prompt_user(prompt_str)
+    accept_str = 'User indicated log file is being monitored in another terminal, so continue.'
+    ans = user_menu.prompt_yes_no(prompt_str, accept_str)
     # if user chose zero to quit early, then do a graceful exit
     if ans == 0:
         module_logger.info('bye')
@@ -185,6 +186,8 @@ def main():
     pform = platform.platform()
     if pform.lower().startswith('linux'):
 
+        module_logger.info('Perform quick tsh data test since OS detected is linux.')
+
         # FIXME this next multiprocessing feature does not work on mac os
         # create buffer to capture 2 seconds of TSH data and show user a summary of what we got (do as process for timeout)
         buff_sec = 2
@@ -198,8 +201,8 @@ def main():
 
         # if thread still active, that is, active for too long, then we log it and quit out
         if p.is_alive():
-            timeout_msg = 'Call show_tsh_buffer_summary (%d sec) still running after %d sec...' % (buff_sec, buff_sec * 2)
-            timeout_msg += 'Too long, something wrong?...Kill it!'
+            timeout_msg = 'A %d-sec tsh data buffer still not filled after %d sec...' % (buff_sec, buff_sec * 2)
+            timeout_msg += 'Too long, something went wrong...kill it!'
             module_logger.info(timeout_msg)
 
             p.terminate()
@@ -207,6 +210,9 @@ def main():
 
             module_logger.info('Why did it take %d seconds or more to fill a %d-second TSH buffer?' %
                                (buff_sec * 2, buff_sec))
+
+            print('See log for early exit due to tsh buffer issue.')
+
             sys.exit(-2)
 
     else:
@@ -223,7 +229,8 @@ def main():
 
     # offer enough prompt info for user to make go/no-go decision...but for now, just this crude prompt
     prompt_str = 'ESP rig at absolute home in all 3 axes (and other stuff initialized)?'
-    ans_go = user_menu.prompt_user(prompt_str)
+    accept_str = 'User indicated that ESP rig, TSH, cable clearance, config and all is a "go".'
+    ans_go = user_menu.prompt_yes_no(prompt_str, accept_str)
     # if user chose zero to quit early, then do a graceful exit
     if ans_go == 0:
         module_logger.info('User aborted at go/no-go decision prompt.')

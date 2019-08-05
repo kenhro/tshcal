@@ -16,13 +16,13 @@ def menu(msg):
     return int(choice)
 
 
-def prompt_user(prompt_str):
+def prompt_yes_no(prompt_str, accept_str):
     while True:
         try:
             ans = menu(prompt_str)
             if ans == 1:
-                resp = 'User pressed one to accept.'
-                module_logger.info(resp)
+                resp = accept_str
+                module_logger.info(accept_str)
                 print(resp)
                 break
             elif ans == 0:
@@ -40,4 +40,4 @@ def prompt_user(prompt_str):
 
 
 if __name__ == '__main__':
-    prompt_user('My message here.')
+    prompt_yes_no('My message here.', 'Okay, lettuce go.')
