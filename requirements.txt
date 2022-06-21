@@ -16,7 +16,7 @@ more-itertools==6.0.0
 mpmath==1.1.0
 mysql-connector-python==8.0.15
 mysqlclient==1.4.2.post1
-numpy==1.16.2
+numpy==1.22.0
 pandas==0.24.1
 parso==0.3.4
 pexpect==4.6.0
